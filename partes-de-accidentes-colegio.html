@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salud Escolar - Aplicación de Gestión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* bg-slate-50 */
+        }
+        .signature-canvas {
+            border: 1px dashed #cbd5e1; /* border-slate-300 */
+            border-radius: 0.5rem;
+            cursor: crosshair;
+        }
+        .nav-button[data-active="true"] {
+            background-color: #2563eb; /* bg-blue-600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .form-field:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            --tw-ring-shadow: 0 0 0 2px #3b82f6;
+            box-shadow: var(--tw-ring-shadow);
+            border-color: #3b82f6;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #report-view, #report-view *, #memory-container, #memory-container * {
+                visibility: visible;
+            }
+            #report-view, #memory-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 1rem;
+                border: none;
+                box-shadow: none;
+            }
+            .no-print {
+                display: none;
+            }
+             #memory-form textarea {
+                height: auto;
+                min-height: 100px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 flex flex-col justify-between min-h-screen p-4 sm:p-6 lg:p-8">
+    <!-- Icon Definitions -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="hidden">
+        <symbol id="icon-plus-circle" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-clock" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.5-13a.5.5 0 00-1 0v5.793l4.146 4.147a.5.5 0 00.708-.708L10 10.293V5z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-check-circle" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-document-text" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 1a1 1 0 011-1h1a1 1 0 110 2H7a1 1 0 01-1-1zm0 4a1 1 0 011-1h5a1 1 0 110 2H7a1 1 0 01-1-1zm0 4a1 1 0 011-1h5a1 1 0 110 2H7a1 1 0 01-1-1z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-user" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-location" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 20l-4.95-6.05a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-pencil" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></symbol>
+        <symbol id="icon-bell" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></symbol>
+        <symbol id="icon-signature" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-eye" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-trash" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-speaker" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.414z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-download" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.707a1 1 0 011.414 0L10 12.001l2.293-2.294a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414zM10 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-3.5 3.5a1 1 0 01-1.414 0l-3.5-3.5a1 1 0 111.414-1.414L9 12.586V4a1 1 0 011-1z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-pdf" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm3 4a1 1 0 100 2h3a1 1 0 100-2H7zM7 9a1 1 0 100 2h6a1 1 0 100-2H7zm0 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></symbol>
+        <symbol id="icon-settings" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></symbol>
+    </svg>
+
+    <div id="main-app" class="w-full max-w-4xl mx-auto hidden flex-grow">
+        <!-- Encabezado con el nombre del colegio -->
+        <div class="text-center mb-6 no-print">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">🏫 Colegio Madre Matilde</h1>
+            <p class="text-slate-500 mt-1">Aplicación de Gestión de Salud Escolar</p>
+        </div>
+
+        <!-- Navegación Principal -->
+        <div id="main-nav-grid" class="mb-8 bg-white p-2 rounded-xl shadow-md grid grid-cols-2 sm:grid-cols-4 items-center justify-center gap-2 no-print">
+            <button id="nav-new" data-target="form-container" class="nav-button flex items-center justify-center gap-2 w-full text-center px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-100 hover:shadow-md">
+                <svg class="w-5 h-5"><use xlink:href="#icon-plus-circle"></use></svg><span>Crear Parte</span>
+            </button>
+            <button id="nav-pending" data-target="pending-container" class="nav-button flex items-center justify-center gap-2 w-full text-center px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-100 hover:shadow-md relative">
+                <svg class="w-5 h-5"><use xlink:href="#icon-clock"></use></svg><span>Pendientes</span>
+                <span id="pending-count" class="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+            </button>
+            <button id="nav-finished" data-target="finished-container" class="nav-button flex items-center justify-center gap-2 w-full text-center px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-100 hover:shadow-md">
+                <svg class="w-5 h-5"><use xlink:href="#icon-check-circle"></use></svg><span>Finalizados</span>
+            </button>
+            
+            <button id="nav-admin" class="nav-button flex items-center justify-center gap-2 w-full text-center px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-100 hover:shadow-md">
+                <svg class="w-5 h-5"><use xlink:href="#icon-settings"></use></svg><span>Administrador</span>
+            </button>
+
+            <button id="nav-memory" data-target="memory-container" class="nav-button hidden flex items-center justify-center gap-2 w-full text-center px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-100 hover:shadow-md">
+                <svg class="w-5 h-5"><use xlink:href="#icon-document-text"></use></svg><span>Memoria</span>
+            </button>
+            <button id="nav-settings" data-target="settings-container" class="nav-button hidden flex items-center justify-center gap-2 w-full text-center px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-100 hover:shadow-md">
+                <svg class="w-5 h-5"><use xlink:href="#icon-settings"></use></svg><span>Ajustes</span>
+            </button>
+        </div>
+
+        <!-- Vista del Formulario -->
+        <div id="form-container" class="app-view bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+            <div class="text-center mb-8">
+                <h1 id="form-title" class="text-2xl sm:text-3xl font-bold text-gray-800">Parte de Comunicación de Accidentes</h1>
+                <p class="text-slate-500 mt-2">Completa todos los campos para registrar la incidencia.</p>
+            </div>
+
+            <form id="accident-form" class="space-y-6">
+                <input type="hidden" id="editingReportId" name="editingReportId">
+                <fieldset class="border-t border-slate-200 pt-6">
+                    <legend class="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-slate-500"><use xlink:href="#icon-user"></use></svg>1. Datos del Alumno/a</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="fullName" class="block text-sm font-medium text-slate-600 mb-1">Nombre y Apellidos</label>
+                            <input type="text" id="fullName" name="fullName" class="form-field w-full p-3 border border-slate-300 rounded-lg transition" required>
+                        </div>
+                        <div>
+                            <label for="course" class="block text-sm font-medium text-slate-600 mb-1">Curso</label>
+                            <select id="course" name="course" class="form-field w-full p-3 border border-slate-300 rounded-lg transition" required>
+                                <option value="">Selecciona un curso</option>
+                                <optgroup label="Infantil">
+                                    <option value="1º Infantil">1º Infantil</option>
+                                    <option value="2º Infantil">2º Infantil</option>
+                                    <option value="3º Infantil">3º Infantil</option>
+                                </optgroup>
+                                <optgroup label="Primaria">
+                                    <option value="1º Primaria">1º Primaria</option>
+                                    <option value="2º Primaria">2º Primaria</option>
+                                    <option value="3º Primaria">3º Primaria</option>
+                                    <option value="4º Primaria">4º Primaria</option>
+                                    <option value="5º Primaria">5º Primaria</option>
+                                    <option value="6º Primaria">6º Primaria</option>
+                                </optgroup>
+                                <optgroup label="ESO">
+                                    <option value="1º ESO">1º ESO</option>
+                                    <option value="2º ESO">2º ESO</option>
+                                    <option value="3º ESO">3º ESO</option>
+                                    <option value="4º ESO">4º ESO</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="border-t border-slate-200 pt-6">
+                    <legend class="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-slate-500"><use xlink:href="#icon-location"></use></svg>2. Detalles del Accidente</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="location" class="block text-sm font-medium text-slate-600 mb-1">Lugar del accidente</label>
+                            <select id="location" name="location" class="form-field w-full p-3 border border-slate-300 rounded-lg transition" required>
+                                <option value="">Selecciona un lugar</option>
+                                <option value="Patio">Patio</option>
+                                <option value="Gimnasio">Gimnasio</option>
+                                <option value="Aula">Aula</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                            <div id="locationOtherContainer" class="hidden mt-4">
+                                <label for="locationOther" class="block text-sm font-medium text-slate-600 mb-1">Especificar otro lugar</label>
+                                <input type="text" id="locationOther" name="locationOther" class="form-field w-full p-3 border border-slate-300 rounded-lg transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="time" class="block text-sm font-medium text-slate-600 mb-1">Hora del accidente</label>
+                            <input type="time" id="time" name="time" class="form-field w-full p-3 border border-slate-300 rounded-lg transition" required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-600 mb-2">Gravedad del accidente</label>
+                            <div class="flex items-center gap-x-6">
+                                <label for="severityLeve" class="flex items-center cursor-pointer"><input type="radio" id="severityLeve" name="severity" value="Leve" class="form-field mr-2 text-yellow-600 focus:ring-yellow-500" required> <span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded-full">Leve</span></label>
+                                <label for="severityGrave" class="flex items-center cursor-pointer"><input type="radio" id="severityGrave" name="severity" value="Grave" class="form-field mr-2 text-red-600 focus:ring-red-500"> <span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full">Grave</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="border-t border-slate-200 pt-6">
+                    <legend class="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-slate-500"><use xlink:href="#icon-pencil"></use></svg>3. Descripción y Actuación</legend>
+                    <div class="space-y-6">
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-slate-600 mb-1">¿Qué ha pasado? (Descripción del accidente)</label>
+                            <div class="relative">
+                                <textarea id="description" name="description" rows="4" class="form-field w-full p-3 border border-slate-300 rounded-lg transition" required></textarea>
+                                <!-- Botón de sugerir acción eliminado -->
+                            </div>
+                        </div>
+                        <div>
+                            <label for="actionTaken" class="block text-sm font-medium text-slate-600 mb-1">¿Cómo se ha actuado?</label>
+                            <textarea id="actionTaken" name="actionTaken" rows="4" class="form-field w-full p-3 border border-slate-300 rounded-lg transition" required></textarea>
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="border-t border-slate-200 pt-6">
+                    <legend class="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-slate-500"><use xlink:href="#icon-bell"></use></svg>4. Notificaciones</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <span class="block text-sm font-medium text-slate-600 mb-2">¿Se ha avisado a la familia? 📞</span>
+                            <div class="flex items-center gap-x-4">
+                                <label for="parentsYes" class="flex items-center"><input type="radio" id="parentsYes" name="parentsCalled" value="Sí" class="form-field mr-2 text-blue-600 focus:ring-blue-500" required> Sí</label>
+                                <label for="parentsNo" class="flex items-center"><input type="radio" id="parentsNo" name="parentsCalled" value="No" class="form-field mr-2 text-blue-600 focus:ring-blue-500"> No</label>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="block text-sm font-medium text-slate-600 mb-2">¿Se ha llamado al 112? 🚑</span>
+                            <div class="flex items-center gap-x-4">
+                                <label for="emergencyYes" class="flex items-center"><input type="radio" id="emergencyYes" name="emergencyCalled" value="Sí" class="form-field mr-2 text-blue-600 focus:ring-blue-500" required> Sí</label>
+                                <label for="emergencyNo" class="flex items-center"><input type="radio" id="emergencyNo" name="emergencyCalled" value="No" class="form-field mr-2 text-blue-600 focus:ring-blue-500"> No</label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="border-t border-slate-200 pt-6">
+                    <legend class="text-lg font-semibold text-slate-700 mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-slate-500"><use xlink:href="#icon-signature"></use></svg>5. Intervinientes y Firmas</legend>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div id="interveners-container" class="space-y-6 md:col-span-2">
+                            <!-- Los bloques de intervinientes se añadirán aquí dinámicamente -->
+                        </div>
+                        <div class="md:col-span-2">
+                             <button type="button" id="add-intervener-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-slate-300 text-slate-600 font-semibold rounded-lg hover:bg-slate-100 hover:border-slate-400 transition-colors">
+                                <svg class="w-5 h-5"><use xlink:href="#icon-plus-circle"></use></svg>Añadir Interviniente
+                            </button>
+                        </div>
+                        <div class="md:col-span-2 border-t pt-6 mt-2">
+                             <label class="block text-sm font-medium text-slate-600 mb-1">Coordinador de Salud</label>
+                             <input type="text" value="Orestes González Villanueva" class="w-full p-3 border border-slate-300 rounded-lg bg-slate-100" readonly>
+                             <label class="block text-sm font-medium text-slate-600 mb-2 mt-4">Firma del Coordinador de Salud</label>
+                             <canvas id="signature-pad-coordinator" class="signature-canvas w-full h-32"></canvas>
+                             <button type="button" class="clear-sig-btn text-sm text-blue-600 hover:underline mt-1" data-target="signature-pad-coordinator">Limpiar firma</button>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-slate-200">
+                    <button type="button" id="clear-btn" class="w-full sm:w-auto px-6 py-3 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Limpiar Formulario</button>
+                    <button type="submit" id="submit-btn" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md">Guardar Parte Pendiente</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Vista de Partes Pendientes -->
+        <div id="pending-container" class="app-view hidden bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+             <div class="text-center mb-8">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Partes Pendientes de Finalizar</h1>
+                <p class="text-slate-500 mt-2">Selecciona un parte para revisarlo y añadir tu firma.</p>
+            </div>
+            <div id="pending-list" class="space-y-4">
+                <!-- Los partes pendientes se insertarán aquí -->
+            </div>
+        </div>
+        
+        <!-- Vista de Partes Finalizados -->
+        <div id="finished-container" class="app-view hidden bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+             <div class="flex flex-col sm:flex-row justify-between items-center text-center sm:text-left gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Archivo de Partes Finalizados</h1>
+                    <p class="text-slate-500 mt-2">Consulta el historial de informes de accidentes completados.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2 no-print">
+                    <button id="download-csv-btn" class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5"><use xlink:href="#icon-download"></use></svg>
+                        <span>Descargar CSV</span>
+                    </button>
+                    <button id="download-all-pdf-btn" class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-md flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5"><use xlink:href="#icon-pdf"></use></svg>
+                        <span id="all-pdf-btn-text">Descargar PDF</span>
+                        <span id="all-pdf-btn-spinner" class="hidden">
+                             <svg class="animate-spin -ml-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="ml-1">Generando...</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+            <div id="finished-list" class="space-y-4">
+                <!-- Los partes finalizados se insertarán aquí -->
+            </div>
+        </div>
+
+        <!-- Vista de Generar Memoria -->
+        <div id="memory-container" class="app-view hidden bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+            <div class="text-center mb-8 border-b pb-4">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Memoria Anual de Salud 🧠</h1>
+                 <p class="text-gray-600 mt-1">Colegio Madre Matilde</p>
+            </div>
+             <p class="text-slate-500 mb-8 text-center -mt-4 no-print">La IA analizará los partes finalizados para rellenar un borrador de este documento.</p>
+            <form id="memory-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="mem-school-year" class="block text-sm font-medium text-slate-600 mb-1">Curso Escolar</label>
+                        <input type="text" id="mem-school-year" class="w-full p-3 border border-slate-300 rounded-lg bg-slate-100" readonly>
+                    </div>
+                    <div>
+                        <label for="mem-school-name" class="block text-sm font-medium text-slate-600 mb-1">Nombre del Centro Educativo</label>
+                        <input type="text" id="mem-school-name" class="w-full p-3 border border-slate-300 rounded-lg bg-slate-100" readonly>
+                    </div>
+                </div>
+                 <div>
+                    <label for="mem-full-report" class="block text-sm font-medium text-slate-600 mb-1">Borrador de la Memoria Anual (Anexo III)</label>
+                    <textarea id="mem-full-report" rows="20" class="w-full p-3 border border-slate-300 rounded-lg form-field"></textarea>
+                </div>
+                 <div class="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-slate-200 no-print">
+                    <!-- Botón de generar memoria con IA eliminado -->
+                    <button type="button" id="print-memory-btn" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md">Imprimir Memoria</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Vista de Ajustes -->
+        <div id="settings-container" class="app-view hidden bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Ajustes de la Aplicación</h1>
+                <p class="text-slate-500 mt-2">Configura los datos del centro y gestiona los informes.</p>
+            </div>
+            <div class="space-y-8 max-w-lg mx-auto">
+                <fieldset class="border border-slate-200 p-6 rounded-lg">
+                    <legend class="text-lg font-semibold text-slate-700 px-2">Datos del Centro</legend>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="setting-school-name" class="block text-sm font-medium text-slate-600 mb-1">Nombre del Centro Educativo</label>
+                            <input type="text" id="setting-school-name" class="form-field w-full p-3 border border-slate-300 rounded-lg transition">
+                        </div>
+                        <div>
+                            <label for="setting-school-year" class="block text-sm font-medium text-slate-600 mb-1">Curso Escolar Actual</label>
+                            <input type="text" id="setting-school-year" placeholder="Ej: 2025-2026" class="form-field w-full p-3 border border-slate-300 rounded-lg transition">
+                        </div>
+                        <button id="save-settings-btn" class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md">Guardar Ajustes</button>
+                    </div>
+                </fieldset>
+                <fieldset class="border border-red-300 bg-red-50 p-6 rounded-lg">
+                    <legend class="text-lg font-semibold text-red-700 px-2">Zona de Peligro</legend>
+                    <div class="space-y-4">
+                        <p class="text-sm text-red-600">Esta acción es irreversible. Se borrarán permanentemente todos los partes de accidentes, tanto pendientes como finalizados.</p>
+                        <button id="delete-all-reports-btn" class="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-md">Borrar Todos los Partes</button>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+
+        <!-- Vista del Informe Final -->
+        <div id="report-view" class="app-view hidden bg-white p-8 sm:p-10 rounded-2xl shadow-lg">
+             <div class="text-center mb-8 border-b pb-4">
+                <h1 class="text-3xl font-bold text-gray-800">Colegio Madre Matilde</h1>
+                <h2 class="text-xl text-gray-600 mt-2">Informe de Accidente Escolar</h2>
+             </div>
+            <div class="space-y-6 text-slate-700">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 border-b border-slate-200 pb-4">
+                    <div><strong>🧑‍🎓 Nombre y Apellidos:</strong> <span id="report-fullName"></span></div>
+                    <div><strong>🏫 Curso:</strong> <span id="report-course"></span></div>
+                    <div><strong>📍 Lugar:</strong> <span id="report-location"></span></div>
+                    <div><strong>⏰ Hora:</strong> <span id="report-time"></span></div>
+                     <div><strong>⚠️ Gravedad:</strong> <span id="report-severity"></span></div>
+                </div>
+                <div class="border-b border-slate-200 pb-4">
+                    <h2 class="font-semibold text-lg mb-2">Descripción del accidente</h2>
+                    <p class="whitespace-pre-wrap" id="report-description"></p>
+                </div>
+                <div class="border-b border-slate-200 pb-4">
+                    <h2 class="font-semibold text-lg mb-2">Actuación realizada</h2>
+                    <p class="whitespace-pre-wrap" id="report-actionTaken"></p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 border-b border-slate-200 pb-4">
+                    <div><strong>📞 Aviso a la familia:</strong> <span id="report-parentsCalled"></span></div>
+                    <div><strong>🚑 Aviso al 112:</strong> <span id="report-emergencyCalled"></span></div>
+                </div>
+                <div class="pt-12">
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-12 text-center" id="report-signatures-container">
+                        <!-- Las firmas de los intervinientes y del coordinador se insertarán aquí dinámicamente -->
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mt-12 no-print">
+                <button type="button" id="back-to-list-btn" class="w-full sm:w-auto px-6 py-3 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors">Volver a la Lista</button>
+                <!-- Botón de TTS eliminado -->
+                <button type="button" id="print-btn" class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md">Imprimir Parte</button>
+                <button type="button" id="download-pdf-btn" class="w-full sm:w-auto px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-md flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5"><use xlink:href="#icon-pdf"></use></svg>
+                    <span id="pdf-btn-text">Descargar PDF</span>
+                    <span id="pdf-btn-spinner" class="hidden">
+                        <svg class="animate-spin -ml-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span class="ml-1">Generando...</span>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de PIN de Administrador -->
+    <div id="admin-pin-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">🔐 Acceso de Administrador</h2>
+            <p class="text-center text-slate-500 mb-6">Por favor, introduce el PIN de administrador para continuar.</p>
+            <div class="flex flex-col gap-4">
+                <input type="password" id="admin-pin-input" class="p-3 text-center text-lg border-2 border-slate-300 rounded-lg form-field" placeholder="****" maxlength="4" pattern="\d*">
+                <p id="admin-pin-error" class="text-red-500 text-sm text-center h-4"></p>
+                <button id="admin-pin-submit-btn" class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md">Entrar</button>
+                <button id="admin-pin-cancel-btn" class="w-full px-6 py-3 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de PIN de Entrada -->
+    <div id="entry-pin-modal-overlay" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Colegio Madre Matilde</h2>
+            <p class="text-slate-500 mb-6">Introduce el PIN para acceder a la aplicación de salud.</p>
+            <div class="flex flex-col gap-4">
+                <input type="password" id="entry-pin-input" class="p-3 text-center text-lg border-2 border-slate-300 rounded-lg form-field" placeholder="****" maxlength="4" pattern="\d*">
+                <p id="entry-pin-error" class="text-red-500 text-sm text-center h-4"></p>
+                <button id="entry-pin-submit-btn" class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md">Acceder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Borrado -->
+    <div id="confirm-delete-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
+            <h2 id="confirm-delete-title" class="text-2xl font-bold text-center text-gray-800 mb-4">Confirmar Acción</h2>
+            <p id="confirm-delete-message" class="text-center text-slate-500 mb-6"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-delete-cancel-btn" class="px-6 py-3 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Cancelar</button>
+                <button id="confirm-delete-confirm-btn" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-md">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 translate-x-12 transition-all duration-300 ease-in-out z-50">
+        <p id="toast-message"></p>
+    </div>
+
+
+    <script type="module">
+        // --- Firebase SDK ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, query, orderBy, serverTimestamp, updateDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // 1. Importar los módulos de autenticación
+        // --- MODIFICACIÓN: Importar todo lo necesario de Auth ---
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        
+        // --- Funciones auxiliares de TTS eliminadas ---
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBigd4Zzpcxmsh8XWdxzbOr2_6acgml6CE",
+            authDomain: "partes-de-accidentes-colegio.firebaseapp.com",
+            projectId: "partes-de-accidentes-colegio",
+            storageBucket: "partes-de-accidentes-colegio.appspot.com",
+            messagingSenderId: "1082690821005",
+            appId: "1:1082690821005:web:2da50857a50a6884617bc4",
+            measurementId: "G-DLKJK30RMH"
+        };
+        
+        // --- AÑADIR: appId ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'partes-app-default';
+        
+        let db;
+        // 2. Declarar la variable auth
+        let auth;
+        try {
+            const app = initializeApp(firebaseConfig);
+            getAnalytics(app);
+            db = getFirestore(app);
+            // 3. Inicializar el servicio de autenticación
+            auth = getAuth(app);
+            console.log("Firebase inicializado correctamente (Firestore y Auth).");
+        } catch (e) {
+            console.error("Error inicializando Firebase:", e);
+            document.body.dataset.firebaseInitError = 'true';
+        }
+        
+        // --- MODIFICACIÓN: Eliminar pendingReportsCollection, solo usar finishedReportsCollection ---
+        let reportsCollection;
+        // 4. Asegurarse de que ambos servicios estén listos
+        if (db && auth) {
+            // Usamos una sola colección como nos indican las reglas de seguridad del usuario
+            reportsCollection = collection(db, "finishedReports");
+            console.log("Usando colección única: finishedReports");
+        }
+        // --- FIN DE LA MODIFICACIÓN ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainApp = document.getElementById('main-app');
+            const appViews = document.querySelectorAll('.app-view');
+            const navButtons = document.querySelectorAll('.nav-button');
+            const accidentForm = document.getElementById('accident-form');
+            const formTitle = document.getElementById('form-title');
+            const submitBtn = document.getElementById('submit-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const printBtn = document.getElementById('print-btn');
+            const backToListBtn = document.getElementById('back-to-list-btn');
+            // const ttsBtn = document.getElementById('tts-btn'); // Eliminado
+            const pendingList = document.getElementById('pending-list');
+            const pendingCount = document.getElementById('pending-count');
+            const finishedList = document.getElementById('finished-list');
+            const editingReportIdInput = document.getElementById('editingReportId');
+            const locationSelect = document.getElementById('location');
+            const locationOtherContainer = document.getElementById('locationOtherContainer');
+            const intervenersContainer = document.getElementById('interveners-container');
+            const addIntervenerBtn = document.getElementById('add-intervener-btn');
+            // const suggestActionBtn = document.getElementById('suggest-action-btn'); // Eliminado
+            const adminPinOverlay = document.getElementById('admin-pin-modal-overlay');
+            const adminPinInput = document.getElementById('admin-pin-input');
+            const adminPinSubmitBtn = document.getElementById('admin-pin-submit-btn');
+            const adminPinCancelBtn = document.getElementById('admin-pin-cancel-btn');
+            const adminPinError = document.getElementById('admin-pin-error');
+            const entryPinOverlay = document.getElementById('entry-pin-modal-overlay');
+            const entryPinInput = document.getElementById('entry-pin-input');
+            const entryPinSubmitBtn = document.getElementById('entry-pin-submit-btn');
+            const entryPinError = document.getElementById('entry-pin-error');
+            const confirmDeleteOverlay = document.getElementById('confirm-delete-modal-overlay');
+            const confirmDeleteMessage = document.getElementById('confirm-delete-message');
+            const confirmDeleteConfirmBtn = document.getElementById('confirm-delete-confirm-btn');
+            const confirmDeleteCancelBtn = document.getElementById('confirm-delete-cancel-btn');
+            const toast = document.getElementById('toast-notification');
+            const toastMessage = document.getElementById('toast-message');
+            // const generateMemoryBtn = document.getElementById('generate-memory-btn'); // Eliminado
+            const printMemoryBtn = document.getElementById('print-memory-btn');
+            const downloadCsvBtn = document.getElementById('download-csv-btn');
+            const downloadAllPdfBtn = document.getElementById('download-all-pdf-btn');
+            const coordinatorCanvas = document.getElementById('signature-pad-coordinator');
+            const signaturePadCoordinator = new SignaturePad(coordinatorCanvas);
+            coordinatorCanvas.signaturePadInstance = signaturePadCoordinator;
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            const saveSettingsBtn = document.getElementById('save-settings-btn');
+            const deleteAllReportsBtn = document.getElementById('delete-all-reports-btn');
+
+            const mainNavGrid = document.getElementById('main-nav-grid');
+            const navAdminBtn = document.getElementById('nav-admin');
+            const navMemoryBtn = document.getElementById('nav-memory');
+            const navSettingsBtn = document.getElementById('nav-settings');
+            
+            let intervenerPads = [];
+            let reportViewSource = 'pending';
+            let isAdminUnlocked = false;
+            let targetViewAfterPin = null;
+            let currentPendingReports = [];
+            let currentFinishedReports = [];
+            let currentReportInViewId = null; 
+
+            let toastTimeout;
+            const showToast = (message, isError = false) => {
+                if (toastTimeout) clearTimeout(toastTimeout);
+                toastMessage.textContent = message;
+                toast.className = 'fixed top-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg transition-all duration-300 ease-in-out z-50';
+                toast.classList.add(isError ? 'bg-red-500' : 'bg-green-500');
+                requestAnimationFrame(() => {
+                    toast.classList.remove('opacity-0', 'translate-x-12');
+                });
+                toastTimeout = setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-x-12');
+                }, 3000);
+            };
+
+            if (document.body.dataset.firebaseInitError) {
+                showToast("Error al conectar con la base de datos.", true);
+            }
+
+            // --- Función callGeminiAPI eliminada ---
+
+            const convertToCSV = (objArray) => {
+                const array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+                let str = '';
+                // --- MODIFICACIÓN: Añadir 'Status' a la cabecera CSV ---
+                const headers = ["ID", "Status", "Fecha Creación", "Fecha Finalización", "Nombre Alumno", "Curso", "Lugar", "Hora", "Gravedad", "Descripción Accidente", "Actuación Realizada", "Aviso Familia", "Aviso 112", "Intervinientes"];
+                str += headers.join(',') + '\r\n';
+                for (let i = 0; i < array.length; i++) {
+                    const report = array[i];
+                    const formatValue = (value) => { if (value == null) return '""'; let strValue = String(value); if (strValue.search(/("|,|\n)/g) >= 0) { strValue = '"' + strValue.replace(/"/g, '""') + '"'; } return `"${strValue}"`; };
+                    const createdAt = report.createdAt ? new Date(report.createdAt.toMillis()).toLocaleString('es-ES') : "N/A";
+                    const finalizedAt = report.finalizedAt ? new Date(report.finalizedAt.toMillis()).toLocaleString('es-ES') : "N/A";
+                    const interveners = (report.interveners || []).map(i => i.name).join('; ');
+                    const status = report.status === 'pending' ? 'Pendiente' : 'Finalizado';
+                    const row = [report.id, status, createdAt, finalizedAt, report.fullName, report.course, report.location, report.time, report.severity, report.description, report.actionTaken, report.parentsCalled, report.emergencyCalled, interveners];
+                    // --- FIN DE LA MODIFICACIÓN ---
+                    str += row.map(val => formatValue(val)).join(',') + '\r\n';
+                }
+                return str;
+            };
+
+            const switchView = (targetId) => {
+                appViews.forEach(view => {
+                    if (!view.classList.contains('hidden')) {
+                        view.classList.add('hidden');
+                    }
+                });
+                const targetView = document.getElementById(targetId);
+                if (targetView) {
+                    targetView.classList.remove('hidden');
+                }
+                navButtons.forEach(btn => btn.setAttribute('data-active', btn.dataset.target === targetId));
+                window.scrollTo(0, 0);
+            };
+            
+            const renderList = (listElement, reports, isPending) => {
+                listElement.innerHTML = '';
+                if (reports.length === 0) { const message = isPending ? 'No hay partes pendientes de finalizar.' : 'No hay partes finalizados en el archivo.'; listElement.innerHTML = `<p class="text-center text-slate-500 py-8">${message}</p>`; return; }
+                reports.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                reports.forEach(report => {
+                    const reportDate = report.createdAt ? new Date(report.createdAt.toMillis()).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Fecha no disponible';
+                    const item = document.createElement('div');
+                    item.className = 'p-4 border border-slate-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white hover:shadow-md hover:border-blue-500 transition-all gap-4';
+                    const actionButton = isPending ? `<button data-id="${report.id}" class="review-btn w-full sm:w-auto px-4 py-2 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2"><svg class="w-4 h-4"><use xlink:href="#icon-signature"></use></svg><span>Revisar</span></button>` : `<button data-id="${report.id}" class="view-btn w-full sm:w-auto px-4 py-2 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2"><svg class="w-4 h-4"><use xlink:href="#icon-eye"></use></svg><span>Ver</span></button>`;
+                    // --- MODIFICACIÓN: Cambiar data-list por data-status ---
+                    item.innerHTML = `<div><p class="font-semibold text-slate-800">${report.fullName}</p><p class="text-sm text-slate-500">Curso: ${report.course} - ${reportDate}</p></div><div class="flex gap-2 w-full sm:w-auto">${actionButton}<button data-id="${report.id}" data-status="${isPending ? 'pending' : 'finished'}" class="edit-btn w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg hover:bg-yellow-600 flex items-center justify-center gap-2"><svg class="w-4 h-4"><use xlink:href="#icon-pencil"></use></svg><span>Editar</span></button><button data-id="${report.id}" class="delete-btn w-full sm:w-auto px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 flex items-center justify-center gap-2"><svg class="w-4 h-4"><use xlink:href="#icon-trash"></use></svg><span>Borrar</span></button></div>`;
+                    // --- FIN DE LA MODIFICACIÓN ---
+                    listElement.appendChild(item);
+                });
+            };
+            
+            const resetForm = () => {
+                accidentForm.reset();
+                signaturePadCoordinator.clear();
+                intervenersContainer.innerHTML = '';
+                intervenerPads = [];
+                addIntervenerBlock();
+                editingReportIdInput.value = '';
+                // --- MODIFICACIÓN: Eliminar dataset de sourceCollection ---
+                delete editingReportIdInput.dataset.status;
+                // --- FIN DE LA MODIFICACIÓN ---
+                document.querySelectorAll('.form-field, #signature-pad-coordinator, .signature-canvas').forEach(el => el.disabled = false);
+                signaturePadCoordinator.on();
+                formTitle.textContent = 'Parte de Comunicación de Accidentes';
+                submitBtn.textContent = 'Guardar Parte Pendiente';
+                submitBtn.className = 'w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md';
+                locationOtherContainer.classList.add('hidden');
+            };
+
+            const loadReportIntoForm = (report) => {
+                 Object.keys(report).forEach(key => {
+                    const el = accidentForm.elements[key];
+                    if (el) { if (el.type === 'radio') { const radioToCheck = document.querySelector(`input[name="${key}"][value="${report[key]}"]`); if (radioToCheck) radioToCheck.checked = true; } else if (key !== 'location') { el.value = report[key]; } }
+                });
+                const locationOtherInput = document.getElementById('locationOther');
+                if (report.location?.startsWith('Otros: ')) { locationSelect.value = 'Otros'; locationOtherContainer.classList.remove('hidden'); locationOtherInput.value = report.location.substring(7); } else { locationSelect.value = report.location; locationOtherContainer.classList.add('hidden'); locationOtherInput.value = ''; }
+                intervenersContainer.innerHTML = '';
+                intervenerPads = [];
+                if (report.interveners?.length > 0) { report.interveners.forEach((intervener, index) => addIntervenerBlock(intervener.name, intervener.signature, index > 0)); } else { addIntervenerBlock(); }
+            };
+
+            const loadReportForSigning = (id) => {
+                const report = currentPendingReports.find(r => r.id === id);
+                if (!report) return;
+                resetForm();
+                loadReportIntoForm(report);
+                editingReportIdInput.value = report.id;
+                if (report.coordinatorSignature) { setTimeout(() => signaturePadCoordinator.fromDataURL(report.coordinatorSignature), 0); }
+                document.querySelectorAll('.form-field, #add-intervener-btn, .remove-intervener-btn, .clear-sig-btn, #interveners-container input, #interveners-container canvas').forEach(el => el.disabled = true);
+                intervenerPads.forEach(pad => pad.off());
+                signaturePadCoordinator.on();
+                document.getElementById('signature-pad-coordinator').disabled = false;
+                document.querySelector('[data-target="signature-pad-coordinator"]').disabled = false;
+                formTitle.textContent = 'Revisar y Finalizar Parte';
+                submitBtn.textContent = 'Finalizar y Generar Parte';
+                submitBtn.className = 'w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md';
+                switchView('form-container');
+            };
+
+            const loadReportForEditing = (id, status) => {
+                // --- MODIFICACIÓN: Buscar en el array correcto (pending o finished) ---
+                const reports = status === 'pending' ? currentPendingReports : currentFinishedReports;
+                // --- FIN DE LA MODIFICACIÓN ---
+                const report = reports.find(r => r.id === id);
+                if (!report) return;
+                resetForm();
+                loadReportIntoForm(report);
+                if (report.coordinatorSignature) { setTimeout(() => signaturePadCoordinator.fromDataURL(report.coordinatorSignature), 0); }
+                editingReportIdInput.value = report.id;
+                // --- MODIFICACIÓN: Usar data-status en lugar de sourceCollection ---
+                editingReportIdInput.dataset.status = status;
+                // --- FIN DE LA MODIFICACIÓN ---
+                formTitle.textContent = 'Editando Parte de Accidente';
+                submitBtn.textContent = 'Guardar Cambios';
+                submitBtn.className = 'w-full sm:w-auto px-6 py-3 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition-colors shadow-md';
+                switchView('form-container');
+            };
+
+            const generateFinalReport = (data) => {
+                currentReportInViewId = data.id;
+                document.getElementById('report-fullName').textContent = data.fullName;
+                document.getElementById('report-course').textContent = data.course;
+                document.getElementById('report-location').textContent = data.location;
+                document.getElementById('report-time').textContent = data.time;
+                document.getElementById('report-severity').textContent = data.severity;
+                document.getElementById('report-severity').className = data.severity === 'Grave' ? 'font-bold text-red-600' : 'font-bold text-yellow-600';
+                document.getElementById('report-description').textContent = data.description;
+                document.getElementById('report-actionTaken').textContent = data.actionTaken;
+                document.getElementById('report-parentsCalled').textContent = data.parentsCalled;
+                document.getElementById('report-emergencyCalled').textContent = data.emergencyCalled;
+                const signaturesContainer = document.getElementById('report-signatures-container');
+                signaturesContainer.innerHTML = '';
+                (data.interveners || []).forEach(intervener => {
+                    const intervenerEl = document.createElement('div');
+                    intervenerEl.className = 'flex flex-col items-center';
+                    intervenerEl.innerHTML = `<img src="${intervener.signature || "https://placehold.co/300x80/ffffff/ffffff?text=No-Firma"}" class="h-20 w-full object-contain" alt="Firma del interviniente"/><div class="border-t border-slate-400 pt-2 w-full mt-2"><p class="font-semibold">Firma Interviniente</p><p class="text-sm text-slate-500">( ${intervener.name} )</p></div>`;
+                    signaturesContainer.appendChild(intervenerEl);
+                });
+                const coordinatorEl = document.createElement('div');
+                coordinatorEl.className = 'flex flex-col items-center';
+                coordinatorEl.innerHTML = `<img src="${data.coordinatorSignature || "https://placehold.co/300x80/ffffff/ffffff?text=No-Firma"}" class="h-20 w-full object-contain" alt="Firma del coordinador"/><div class="border-t border-slate-400 pt-2 w-full mt-2"><p class="font-semibold">Firma Coordinador de Salud</p><p class="text-sm text-slate-500">( Orestes González Villanueva )</p></div>`;
+                signaturesContainer.appendChild(coordinatorEl);
+                switchView('report-view');
+            }
+
+            const showAdminPinModal = (action) => { targetViewAfterPin = action; adminPinInput.value = ''; adminPinError.textContent = ''; adminPinOverlay.classList.remove('hidden'); adminPinInput.focus(); };
+            const hideAdminPinModal = () => { adminPinOverlay.classList.add('hidden'); targetViewAfterPin = null; };
+            
+            const handleAdminPinSubmit = () => {
+                if (adminPinInput.value === '2025') {
+                    isAdminUnlocked = true;
+                    const action = targetViewAfterPin; // Store action before hiding modal
+                    hideAdminPinModal();
+                    
+                    if (action === 'unlock') {
+                        navAdminBtn.classList.add('hidden');
+                        navMemoryBtn.classList.remove('hidden');
+                        navSettingsBtn.classList.remove('hidden');
+                        mainNavGrid.classList.remove('sm:grid-cols-4');
+                        mainNavGrid.classList.add('sm:grid-cols-5');
+                    } else if (action) {
+                        switchView(action);
+                    }
+                } else {
+                    adminPinError.textContent = 'PIN de administrador incorrecto.';
+                    adminPinInput.value = '';
+                    adminPinInput.focus();
+                }
+            };
+            
+            // 5. Convertir la función en async para usar await
+            const handleEntryPinSubmit = async () => { 
+                if (entryPinInput.value === '1234') {
+                    entryPinSubmitBtn.disabled = true;
+                    entryPinSubmitBtn.textContent = 'Autenticando...';
+                    entryPinError.textContent = ''; // Limpiar errores previos
+
+                    try {
+                        if (!auth) throw new Error('El servicio de autenticación no está listo.');
+                        
+                        // --- MODIFICACIÓN: Usar signInWithCustomToken o signInAnonymously ---
+                        /*
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                            console.log('Autenticación con token exitosa.');
+                        } else {
+                            await signInAnonymously(auth);
+                            console.log('Autenticación anónima exitosa.');
+                        }
+                        */
+                        // --- FIN DE LA MODIFICACIÓN ---
+
+                        // --- CORRECCIÓN: Forzar signInAnonymously para este proyecto de Firebase personalizado ---
+                        // El __initial_auth_token del entorno no es válido para este firebaseConfig específico.
+                        await signInAnonymously(auth);
+                        console.log('Autenticación anónima exitosa.');
+                        // --- FIN DE LA CORRECCIÓN ---
+
+
+                        // 7. Si tiene éxito, continuar cargando la app
+                        entryPinOverlay.classList.add('hidden'); 
+                        mainApp.classList.remove('hidden'); 
+                        initializeAppUI(); 
+                    } catch (error) {
+                        console.error('Fallo el inicio de sesión anónimo:', error);
+                        // --- INICIO DE LA MODIFICACIÓN ---
+                        // Proporcionar un mensaje de error más específico al usuario
+                        if (error.code === 'auth/configuration-not-found') {
+                            entryPinError.textContent = 'Error: El inicio de sesión anónimo no está activado en tu proyecto de Firebase.';
+                            showToast('Error: Ve a Firebase Console > Authentication > Sign-in method y activa "Anónimo".', true);
+                        } else {
+                            entryPinError.textContent = 'Error de autenticación. Revisa la consola.';
+                            showToast('Error de autenticación. No se pudo conectar.', true);
+                        }
+                        // --- FIN DE LA MODIFICACIÓN ---
+                    } finally {
+                        // 8. Reactivar el botón
+                        entryPinSubmitBtn.disabled = false;
+                        entryPinSubmitBtn.textContent = 'Acceder';
+                    }
+
+                } else { 
+                    entryPinError.textContent = 'PIN incorrecto. Inténtalo de nuevo.'; 
+                    entryPinInput.value = ''; 
+                    entryPinInput.focus(); 
+                } 
+            };
+
+            const updateUIWithSettings = (settings) => {
+                document.querySelector('#main-app > .text-center > h1').textContent = `🏫 ${settings.schoolName}`;
+                document.querySelector('#entry-pin-modal-overlay h2').textContent = settings.schoolName;
+                document.querySelector('#report-view h1').textContent = settings.schoolName;
+                document.querySelector('#memory-container .text-gray-600').textContent = settings.schoolName;
+                document.getElementById('mem-school-year').value = settings.schoolYear;
+                document.getElementById('mem-school-name').value = settings.schoolName;
+                document.getElementById('setting-school-name').value = settings.schoolName;
+                document.getElementById('setting-school-year').value = settings.schoolYear;
+            };
+
+            const loadSettings = () => {
+                const schoolName = localStorage.getItem('schoolName') || 'Colegio Madre Matilde';
+                const schoolYear = localStorage.getItem('schoolYear') || '2025-2026';
+                updateUIWithSettings({ schoolName, schoolYear });
+                return { schoolName, schoolYear };
+            };
+
+            const saveSettings = () => {
+                const schoolName = document.getElementById('setting-school-name').value;
+                const schoolYear = document.getElementById('setting-school-year').value;
+                if (!schoolName.trim() || !schoolYear.trim()) { showToast('El nombre del centro y el curso son obligatorios.', true); return; }
+                localStorage.setItem('schoolName', schoolName);
+                localStorage.setItem('schoolYear', schoolYear);
+                updateUIWithSettings({ schoolName, schoolYear });
+                showToast('Ajustes guardados correctamente.');
+            };
+
+            const deleteAllReports = async () => {
+                if (!db) { showToast("La base de datos no está conectada.", true); return; }
+                if (!auth.currentUser) { showToast("No estás autenticado.", true); return; }
+                try {
+                    const batch = writeBatch(db);
+                    // --- MODIFICACIÓN: Borrar solo de la colección única ---
+                    const allReportsSnapshot = await getDocs(reportsCollection);
+                    allReportsSnapshot.forEach(doc => batch.delete(doc.ref));
+                    // --- FIN DE LA MODIFICACIÓN ---
+                    await batch.commit();
+                    showToast('Todos los partes han sido borrados.');
+                } catch (error) { console.error("Error borrando todos los partes:", error); showToast('Ocurrió un error al borrar los partes.', true); }
+            };
+
+            navButtons.forEach(btn => {
+                if (btn.id === 'nav-admin') return; // Skip admin button, it has its own listener
+                btn.addEventListener('click', (e) => {
+                    const targetId = e.currentTarget.dataset.target;
+                    if (!document.getElementById(targetId)?.classList.contains('hidden')) return;
+                    if (targetId === 'form-container') {
+                        resetForm();
+                        switchView(targetId);
+                    } else {
+                        if (isAdminUnlocked) {
+                            switchView(targetId);
+                        } else {
+                            showAdminPinModal(targetId);
+                        }
+                    }
+                })
+            });
+
+            navAdminBtn.addEventListener('click', () => {
+                showAdminPinModal('unlock');
+            });
+            
+            accidentForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!db) { showToast("La base de datos no está conectada.", true); return; }
+                if (!auth.currentUser) { showToast("No estás autenticado. Recarga la página.", true); return; }
+
+                const reportId = editingReportIdInput.value;
+                // --- MODIFICACIÓN: Usar data-status en lugar de sourceCollection ---
+                const status = editingReportIdInput.dataset.status;
+                // --- FIN DE LA MODIFICACIÓN ---
+
+                // --- MODIFICACIÓN: Lógica de Finalizar Parte (ahora es un UPDATE) ---
+                if (reportId && !status) { // MODO FINALIZAR (status está vacío, solo ID)
+                    if (signaturePadCoordinator.isEmpty()) { showToast('La firma del coordinador es necesaria para finalizar.', true); return; }
+                    
+                    const docRef = doc(reportsCollection, reportId);
+                    const coordinatorSig = signaturePadCoordinator.toDataURL();
+                    const finalizedData = { 
+                        coordinatorSignature: coordinatorSig, 
+                        finalizedAt: serverTimestamp(),
+                        status: 'finished' // <-- Cambiar status
+                    };
+
+                    try {
+                        await updateDoc(docRef, finalizedData);
+                        
+                        // Cargar los datos completos para la vista de informe
+                        const reportToFinalize = currentPendingReports.find(r => r.id === reportId);
+                        const fullFinalizedData = { ...reportToFinalize, ...finalizedData };
+
+                        reportViewSource = 'finished';
+                        showToast('Parte finalizado y archivado.');
+                        generateFinalReport({ ...fullFinalizedData, id: reportId }); 
+                    } catch (error) { 
+                        console.error("Error finalizando:", error); 
+                        showToast('No se pudo finalizar el parte.', true); 
+                    }
+                // --- FIN DE LA MODIFICACIÓN ---
+                } else { // MODO NUEVO O EDICIÓN
+                    const formData = new FormData(accidentForm);
+                    const data = Object.fromEntries(formData.entries());
+                    if (!data.severity) { showToast('Debe seleccionar la gravedad del accidente.', true); return; }
+                    if (data.location === 'Otros') data.location = `Otros: ${data.locationOther || ''}`;
+                    delete data.locationOther;
+                    const interveners = [];
+                    const intervenerBlocks = document.querySelectorAll('.intervener-block');
+                    for(let i = 0; i < intervenerBlocks.length; i++) {
+                        const name = intervenerBlocks[i].querySelector('input[name="intervenerName"]').value;
+                        if (!name) { showToast(`El nombre del Interviniente ${i+1} es obligatorio.`, true); return; }
+                        if (intervenerPads[i].isEmpty()) { showToast(`La firma del Interviniente ${i+1} es obligatoria.`, true); return; }
+                        interveners.push({ name, signature: intervenerPads[i].toDataURL() });
+                    }
+                    if (interveners.length === 0) { showToast('Se requiere al menos un interviniente con firma.', true); return; }
+                    data.interveners = interveners;
+
+                    // --- MODIFICACIÓN: Lógica de Edición (ahora es un UPDATE) ---
+                    if (reportId && status) { // MODO EDICIÓN (status está presente)
+                        const docRef = doc(reportsCollection, reportId);
+                        delete data.editingReportId;
+                        const updatedData = {...data, coordinatorSignature: signaturePadCoordinator.isEmpty() ? null : signaturePadCoordinator.toDataURL()};
+                        // No modificamos el status aquí, se mantiene 'pending' o 'finished'
+                        
+                        try { 
+                            await updateDoc(docRef, updatedData); 
+                            showToast('Parte actualizado correctamente.'); 
+                            switchView(status === 'pending' ? 'pending-container' : 'finished-container'); 
+                            resetForm(); 
+                        } catch (error) { 
+                            console.error("Error actualizando:", error); 
+                            showToast('No se pudo actualizar el parte.', true); 
+                        }
+                    // --- FIN DE LA MODIFICACIÓN ---
+                    } else { // MODO NUEVO
+                        // --- MODIFICACIÓN: Añadir status: 'pending' ---
+                        const newReport = {
+                            ...data, 
+                            createdAt: serverTimestamp(), 
+                            coordinatorSignature: signaturePadCoordinator.isEmpty() ? null : signaturePadCoordinator.toDataURL(),
+                            status: 'pending' // <-- Nuevo campo de status
+                        };
+                        // --- FIN DE LA MODIFICACIÓN ---
+                        try { 
+                            // --- MODIFICACIÓN: Guardar en la colección única ---
+                            await addDoc(reportsCollection, newReport); 
+                            // --- FIN DE LA MODIFICACIÓN ---
+                            showToast('Parte guardado como pendiente.'); 
+                            resetForm(); 
+                            window.scrollTo(0, 0); 
+                        } catch (error) { 
+                            console.error("Error guardando:", error); 
+                            showToast('No se pudo guardar el parte.', true); 
+                        }
+                    }
+                }
+            });
+            
+            clearBtn.addEventListener('click', resetForm);
+            printBtn.addEventListener('click', () => window.print());
+            backToListBtn.addEventListener('click', () => switchView(reportViewSource === 'pending' ? 'pending-container' : 'finished-container'));
+
+            const handleListClick = (e) => {
+                const button = e.target.closest('button');
+                if (!button) return;
+                const reportId = button.dataset.id;
+                if (button.classList.contains('review-btn')) { loadReportForSigning(reportId); }
+                else if (button.classList.contains('view-btn')) { const report = currentFinishedReports.find(r => r.id === reportId); if(report) { reportViewSource = 'finished'; generateFinalReport(report); } }
+                // --- MODIFICACIÓN: Usar data-status ---
+                else if (button.classList.contains('edit-btn')) { loadReportForEditing(reportId, button.dataset.status); }
+                // --- FIN DE LA MODIFICACIÓN ---
+                else if (button.classList.contains('delete-btn')) {
+                    // --- MODIFICACIÓN: Simplificar borrado ---
+                    confirmDeleteMessage.textContent = `¿Estás seguro de que quieres borrar este parte?`;
+                    confirmDeleteConfirmBtn.dataset.action = 'delete-single';
+                    confirmDeleteConfirmBtn.dataset.reportId = reportId;
+                    delete confirmDeleteConfirmBtn.dataset.collectionName; // Ya no es necesario
+                    confirmDeleteOverlay.classList.remove('hidden');
+                    // --- FIN DE LA MODIFICACIÓN ---
+                }
+            };
+            pendingList.addEventListener('click', handleListClick);
+            finishedList.addEventListener('click', handleListClick);
+            
+            intervenersContainer.addEventListener('click', (e) => {
+                const clearButton = e.target.closest('.clear-sig-btn');
+                const removeButton = e.target.closest('.remove-intervener-btn');
+                if (clearButton) { const block = clearButton.closest('.intervener-block'); const index = [...intervenersContainer.children].indexOf(block); if (intervenerPads[index] && !block.querySelector('canvas').disabled) intervenerPads[index].clear(); }
+                if (removeButton) { const block = removeButton.closest('.intervener-block'); const index = [...intervenersContainer.children].indexOf(block); intervenerPads.splice(index, 1); block.remove(); intervenersContainer.querySelectorAll('.intervener-label').forEach((label, idx) => label.textContent = `Interviniente ${idx + 1}`); }
+            });
+
+            document.querySelector('.clear-sig-btn[data-target="signature-pad-coordinator"]').addEventListener('click', () => { if (!coordinatorCanvas.disabled) signaturePadCoordinator.clear(); });
+            locationSelect.addEventListener('change', () => locationOtherContainer.classList.toggle('hidden', locationSelect.value !== 'Otros'));
+            adminPinSubmitBtn.addEventListener('click', handleAdminPinSubmit);
+            adminPinInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAdminPinSubmit(); });
+            adminPinCancelBtn.addEventListener('click', hideAdminPinModal);
+            adminPinOverlay.addEventListener('click', (e) => { if (e.target === adminPinOverlay) hideAdminPinModal(); });
+            entryPinSubmitBtn.addEventListener('click', handleEntryPinSubmit);
+            entryPinInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleEntryPinSubmit(); });
+            confirmDeleteCancelBtn.addEventListener('click', () => confirmDeleteOverlay.classList.add('hidden'));
+            confirmDeleteOverlay.addEventListener('click', (e) => { if (e.target === confirmDeleteOverlay) confirmDeleteOverlay.classList.add('hidden'); });
+
+            confirmDeleteConfirmBtn.addEventListener('click', async (e) => {
+                // --- MODIFICACIÓN: Simplificar borrado ---
+                const { action, reportId } = e.currentTarget.dataset;
+                if (!auth.currentUser) { showToast("No estás autenticado.", true); return; }
+                if (action === 'delete-all') { await deleteAllReports(); }
+                else if (action === 'delete-single' && reportId) {
+                    try { 
+                        await deleteDoc(doc(reportsCollection, reportId)); 
+                        showToast('Parte borrado correctamente.'); 
+                    }
+                    catch (error) { console.error("Error borrando:", error); showToast('No se pudo borrar el parte.', true); }
+                }
+                // --- FIN DE LA MODIFICACIÓN ---
+                confirmDeleteOverlay.classList.add('hidden');
+            });
+
+            deleteAllReportsBtn.addEventListener('click', () => {
+                confirmDeleteMessage.textContent = '¿Estás seguro de que quieres borrar TODOS los partes? Esta acción es irreversible.';
+                confirmDeleteConfirmBtn.dataset.action = 'delete-all';
+                delete confirmDeleteConfirmBtn.dataset.reportId;
+                delete confirmDeleteConfirmBtn.dataset.collectionName;
+                confirmDeleteOverlay.classList.remove('hidden');
+            });
+            saveSettingsBtn.addEventListener('click', saveSettings);
+
+            // --- Event listener de suggestActionBtn eliminado ---
+
+            // --- Event listener de generateMemoryBtn eliminado ---
+
+            printMemoryBtn.addEventListener('click', () => window.print());
+
+            downloadCsvBtn.addEventListener('click', () => {
+                // --- MODIFICACIÓN: Descargar CSV de ambas listas ---
+                const allReports = [...currentPendingReports, ...currentFinishedReports];
+                if (allReports.length === 0) { showToast('No hay partes para descargar.', true); return; }
+                try {
+                    const csvData = convertToCSV(allReports);
+                // --- FIN DE LA MODIFICACIÓN ---
+                    const blob = new Blob([`\uFEFF${csvData}`], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement("a");
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute("href", url);
+                    const date = new Date().toISOString().slice(0, 10);
+                    link.setAttribute("download", `informe_salud_escolar_${date}.csv`);
+                    link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+                    showToast('Descarga CSV iniciada.');
+                } catch (error) { console.error("Error al generar el archivo CSV:", error); showToast('No se pudo generar el archivo de descarga.', true); }
+            });
+
+            const populateReportViewForCapture = (data) => {
+                document.getElementById('report-fullName').textContent = data.fullName || '';
+                document.getElementById('report-course').textContent = data.course || '';
+                document.getElementById('report-location').textContent = data.location || '';
+                document.getElementById('report-time').textContent = data.time || '';
+                document.getElementById('report-severity').textContent = data.severity || '';
+                document.getElementById('report-severity').className = data.severity === 'Grave' ? 'font-bold text-red-600' : 'font-bold text-yellow-600';
+                document.getElementById('report-description').textContent = data.description || '';
+                document.getElementById('report-actionTaken').textContent = data.actionTaken || '';
+                document.getElementById('report-parentsCalled').textContent = data.parentsCalled || '';
+                document.getElementById('report-emergencyCalled').textContent = data.emergencyCalled || '';
+                const signaturesContainer = document.getElementById('report-signatures-container');
+                signaturesContainer.innerHTML = '';
+                const imagesToLoad = [];
+                (data.interveners || []).forEach(intervener => { const intervenerEl = document.createElement('div'); intervenerEl.className = 'flex flex-col items-center'; intervenerEl.innerHTML = `<img src="${intervener.signature || "https://placehold.co/300x80/ffffff/ffffff?text=No-Firma"}" class="h-20 w-full object-contain" alt="Firma del interviniente"/><div class="border-t border-slate-400 pt-2 w-full mt-2"><p class="font-semibold">Firma Interviniente</p><p class="text-sm text-slate-500">( ${intervener.name} )</p></div>`; signaturesContainer.appendChild(intervenerEl); imagesToLoad.push(intervenerEl.querySelector('img')); });
+                const coordinatorEl = document.createElement('div'); coordinatorEl.className = 'flex flex-col items-center'; coordinatorEl.innerHTML = `<img src="${data.coordinatorSignature || "https://placehold.co/300x80/ffffff/ffffff?text=No-Firma"}" class="h-20 w-full object-contain" alt="Firma del coordinador"/><div class="border-t border-slate-400 pt-2 w-full mt-2"><p class="font-semibold">Firma Coordinador de Salud</p><p class="text-sm text-slate-500">( Orestes González Villanueva )</p></div>`; signaturesContainer.appendChild(coordinatorEl); imagesToLoad.push(coordinatorEl.querySelector('img'));
+                return Promise.all(imagesToLoad.map(img => new Promise((resolve) => { if (img.complete && img.naturalHeight !== 0) { resolve(); } else { img.onload = resolve; img.onerror = resolve; } })));
+            };
+
+            downloadAllPdfBtn.addEventListener('click', async () => {
+                // --- MODIFICACIÓN: Descargar PDF de partes finalizados (status !== 'pending') ---
+                const reportsToDownload = currentFinishedReports; // Sigue siendo la lista de finalizados
+                if (reportsToDownload.length === 0) { showToast('No hay partes finalizados para descargar.', true); return; }
+                // --- FIN DE LA MODIFICACIÓN ---
+                const btnText = document.getElementById('all-pdf-btn-text'); const btnSpinner = document.getElementById('all-pdf-btn-spinner'); const reportView = document.getElementById('report-view'); const buttonContainer = reportView.querySelector('.no-print'); const date = new Date().toISOString().slice(0, 10); const filename = `todos_los_partes_finalizados_${date}.pdf`;
+                btnText.parentElement.classList.add('hidden'); btnSpinner.parentElement.classList.remove('hidden'); downloadAllPdfBtn.disabled = true;
+                const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                reportView.style.position = 'absolute'; reportView.style.left = '-9999px'; reportView.style.top = '0px'; reportView.classList.remove('hidden'); buttonContainer.style.display = 'none';
+                try {
+                    for (let i = 0; i < reportsToDownload.length; i++) {
+                        await populateReportViewForCapture(reportsToDownload[i]);
+                        const canvas = await html2canvas(reportView, { scale: 2, useCORS: true }); const imgData = canvas.toDataURL('image/png');
+                        const pdfWidth = pdf.internal.pageSize.getWidth(); const pdfHeight = pdf.internal.pageSize.getHeight(); const ratio = canvas.width / canvas.height; let imgWidth = pdfWidth - 20; let imgHeight = imgWidth / ratio; if (imgHeight > pdfHeight - 20) { imgHeight = pdfHeight - 20; imgWidth = imgHeight * ratio; }
+                        pdf.addImage(imgData, 'PNG', (pdfWidth - imgWidth) / 2, 10, imgWidth, imgHeight);
+                        if (i < reportsToDownload.length - 1) { pdf.addPage(); }
+                    }
+                    pdf.save(filename); showToast('PDF con todos los partes generado.');
+                } catch (error) { console.error('Error generando PDF:', error); showToast('No se pudo generar el PDF.', true);
+                } finally { reportView.style.position = ''; reportView.style.left = ''; reportView.style.top = ''; reportView.classList.add('hidden'); buttonContainer.style.display = 'flex'; btnText.parentElement.classList.remove('hidden'); btnSpinner.parentElement.classList.add('hidden'); downloadAllPdfBtn.disabled = false; }
+            });
+
+            // --- Event listener de ttsBtn eliminado ---
+
+            downloadPdfBtn.addEventListener('click', async () => {
+                const btnText = document.getElementById('pdf-btn-text'); const btnSpinner = document.getElementById('pdf-btn-spinner'); const reportView = document.getElementById('report-view'); const studentName = document.getElementById('report-fullName').textContent.trim().replace(/ /g, '_'); const date = new Date().toISOString().slice(0, 10); const filename = `parte_accidente_${studentName}_${date}.pdf`; const buttonContainer = reportView.querySelector('.no-print');
+                btnText.parentElement.classList.add('hidden'); btnSpinner.parentElement.classList.remove('hidden'); downloadPdfBtn.disabled = true;
+                try {
+                    buttonContainer.style.display = 'none'; const canvas = await html2canvas(reportView, { scale: 2, useCORS: true }); buttonContainer.style.display = 'flex';
+                    const imgData = canvas.toDataURL('image/png'); const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                    const pdfWidth = pdf.internal.pageSize.getWidth(); const pdfHeight = pdf.internal.pageSize.getHeight(); const ratio = canvas.width / canvas.height; let imgWidth = pdfWidth - 20; let imgHeight = imgWidth / ratio; if (imgHeight > pdfHeight - 20) { imgHeight = pdfHeight - 20; imgWidth = imgHeight * ratio; }
+                    pdf.addImage(imgData, 'PNG', (pdfWidth - imgWidth) / 2, 10, imgWidth, imgHeight); pdf.save(filename); showToast('PDF generado correctamente.');
+                } catch (error) { console.error('Error generando PDF:', error); showToast('No se pudo generar el PDF.', true);
+                } finally { btnText.parentElement.classList.remove('hidden'); btnSpinner.parentElement.classList.add('hidden'); downloadPdfBtn.disabled = false; }
+            });
+
+
+            const addIntervenerBlock = (name = '', signature = null, isRemovable = false) => {
+                const index = intervenerPads.length;
+                const block = document.createElement('div');
+                block.className = 'intervener-block bg-slate-50 p-4 rounded-lg border';
+                const removeButtonHTML = isRemovable ? '<button type="button" class="remove-intervener-btn p-1 rounded-full text-red-500 hover:bg-red-100 hover:text-red-700"><svg class="w-5 h-5 pointer-events-none"><use xlink:href="#icon-trash"></use></svg></button>' : '';
+                block.innerHTML = `<div class="flex justify-between items-center mb-2"><label class="block text-sm font-medium text-slate-600 intervener-label">Interviniente ${index + 1}</label>${removeButtonHTML}</div><label class="block text-sm font-medium text-slate-600 mb-1">Nombre</label><input type="text" name="intervenerName" class="form-field w-full p-3 border border-slate-300 rounded-lg transition mb-4" value="${name}" required><label class="block text-sm font-medium text-slate-600 mb-2">Firma</label><canvas class="signature-canvas w-full h-32"></canvas><button type="button" class="clear-sig-btn text-sm text-blue-600 hover:underline mt-1">Limpiar firma</button>`;
+                intervenersContainer.appendChild(block);
+                const canvas = block.querySelector('.signature-canvas'); const pad = new SignaturePad(canvas); canvas.signaturePadInstance = pad; intervenerPads.push(pad);
+                setTimeout(() => { const ratio = Math.max(window.devicePixelRatio || 1, 1); canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio; canvas.getContext("2d").scale(ratio, ratio); pad.clear(); if (signature) { pad.fromDataURL(signature); } }, 0);
+            };
+
+            addIntervenerBtn.addEventListener('click', () => addIntervenerBlock('', null, true));
+
+            const onResize = () => { document.querySelectorAll('.signature-canvas').forEach(canvas => { if (!canvas.signaturePadInstance) return; const signaturePad = canvas.signaturePadInstance; const data = signaturePad.toDataURL(); const ratio = Math.max(window.devicePixelRatio || 1, 1); canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio; canvas.getContext("2d").scale(ratio, ratio); signaturePad.fromDataURL(data); }); };
+
+            const initializeAppUI = () => {
+                // 9. Ahora esta función solo se llama DESPUÉS de la autenticación
+                if (!db || !auth.currentUser) { 
+                    console.warn("Firestore o Auth no están listos, o el usuario no está autenticado."); 
+                    showToast("Error de conexión. Recarga la página.", true);
+                    return; 
+                }
+                console.log("Usuario autenticado:", auth.currentUser.uid);
+                console.log("Inicializando UI y listeners de Firestore...");
+                
+                loadSettings();
+                
+                // --- MODIFICACIÓN: Usar una sola consulta y filtrar en el cliente ---
+                const qReports = query(reportsCollection);
+                
+                console.log("Escuchando cambios en 'finishedReports' (para pendientes y finalizados)");
+                
+                onSnapshot(qReports, (snapshot) => { 
+                    const allReports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    
+                    // Filtrar en el cliente
+                    currentPendingReports = allReports.filter(report => report.status === 'pending');
+                    currentFinishedReports = allReports.filter(report => report.status !== 'pending'); // Incluir 'finished' o indefinido
+                    
+                    // Ordenar en el cliente (JavaScript)
+                    currentPendingReports.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                    currentFinishedReports.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+                    // Renderizar ambas listas
+                    renderList(pendingList, currentPendingReports, true); 
+                    renderList(finishedList, currentFinishedReports, false); 
+                    
+                    pendingCount.textContent = currentPendingReports.length; 
+                    pendingCount.classList.toggle('hidden', currentPendingReports.length === 0); 
+
+                }, (error) => console.error("Error al cargar partes:", error));
+                // --- FIN DE LA MODIFICACIÓN ---
+
+                setTimeout(() => { const ratio = Math.max(window.devicePixelRatio || 1, 1); coordinatorCanvas.width = coordinatorCanvas.offsetWidth * ratio; coordinatorCanvas.height = coordinatorCanvas.offsetHeight * ratio; coordinatorCanvas.getContext("2d").scale(ratio, ratio); signaturePadCoordinator.clear(); },0);
+                addIntervenerBlock();
+                switchView('form-container');
+                window.addEventListener('resize', onResize);
+            };
+
+            entryPinInput.focus();
+        });
+    </script>
+
+    <footer class="no-print" style="text-align:center; font-size:0.9rem; color:#777; padding:12px 0">
+      © 2025 Orestes González Villanueva — Desarrollado con Gemini ·
+      <a href="mailto:ogonzalezv01@educarex.es?subject=Contacto%20App%20Gemini&body=Hola%20Orestes,"
+      	  style="color:inherit; text-decoration:underline;">ogonzalezv01@educarex.es</a>
+    </footer>
+</body>
+</html>
