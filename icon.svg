@@ -1,21 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="white"/>
   
-  <!-- Muleta -->
+  <!-- Niño con escayola en el brazo -->
   <g transform="translate(256, 256)">
-    <!-- Apoyo superior horizontal -->
-    <rect x="-60" y="-180" width="120" height="25" rx="5" fill="#dc2626"/>
+    <!-- Cabeza -->
+    <circle cx="0" cy="-120" r="50" fill="#fbbf24"/>
     
-    <!-- Barra vertical principal -->
-    <rect x="-12" y="-180" width="24" height="340" rx="8" fill="#dc2626"/>
+    <!-- Cara -->
+    <circle cx="-15" cy="-125" r="5" fill="#1f2937"/>
+    <circle cx="15" cy="-125" r="5" fill="#1f2937"/>
+    <path d="M -15,-105 Q 0,-100 15,-105" stroke="#1f2937" stroke-width="3" fill="none"/>
     
-    <!-- Apoyo para antebrazo -->
-    <rect x="-50" y="-80" width="100" height="20" rx="5" fill="#dc2626"/>
+    <!-- Cuerpo -->
+    <rect x="-40" y="-65" width="80" height="90" rx="15" fill="#3b82f6"/>
     
-    <!-- Empuñadura -->
-    <ellipse cx="0" cy="-30" rx="15" ry="25" fill="#991b1b"/>
+    <!-- Piernas -->
+    <rect x="-35" y="25" width="30" height="70" rx="10" fill="#1e40af"/>
+    <rect x="5" y="25" width="30" height="70" rx="10" fill="#1e40af"/>
     
-    <!-- Regatón (punta inferior con goma) -->
-    <ellipse cx="0" cy="165" rx="18" ry="12" fill="#1f2937"/>
+    <!-- Pies -->
+    <ellipse cx="-20" cy="100" rx="18" ry="12" fill="#7c3aed"/>
+    <ellipse cx="20" cy="100" rx="18" ry="12" fill="#7c3aed"/>
+    
+    <!-- Brazo izquierdo -->
+    <rect x="-70" y="-50" width="25" height="70" rx="12" fill="#fbbf24"/>
+    
+    <!-- Brazo derecho con ESCAYOLA -->
+    <rect x="45" y="-40" width="30" height="80" rx="8" fill="#f3f4f6"/>
+    
+    <!-- Detalles escayola -->
+    <line x1="48" y1="-30" x2="72" y2="-30" stroke="#d1d5db" stroke-width="2"/>
+    <line x1="48" y1="-10" x2="72" y2="-10" stroke="#d1d5db" stroke-width="2"/>
+    <line x1="48" y1="10" x2="72" y2="10" stroke="#d1d5db" stroke-width="2"/>
+    <line x1="48" y1="30" x2="72" y2="30" stroke="#d1d5db" stroke-width="2"/>
+    
+    <!-- Cruz roja -->
+    <rect x="55" y="-5" width="10" height="3" fill="#dc2626"/>
+    <rect x="58" y="-8" width="3" height="10" fill="#dc2626"/>
   </g>
 </svg>
