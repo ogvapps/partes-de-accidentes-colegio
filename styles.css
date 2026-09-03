@@ -1,0 +1,311 @@
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --secondary: #64748b;
+    --accent: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --radius-lg: 1rem;
+    --radius-md: 0.75rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--background);
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism effects */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Premium Inputs */
+.form-field {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-field:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.15);
+}
+
+/* Custom Signature Pad */
+.signature-canvas {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    transition: border-color 0.2s;
+    touch-action: none;
+}
+
+.signature-canvas:hover {
+    border-color: var(--primary);
+}
+
+/* Navigation Buttons */
+.nav-button {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.nav-button[data-active="true"] {
+    background-color: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.nav-button[data-active="true"]::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 25%;
+    width: 50%;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 2px;
+    opacity: 0.5;
+}
+
+/* High-End Pro Report Styles */
+.report-page {
+    padding: 60px;
+    background: #ffffff !important;
+    width: 800px;
+    margin: 0 auto;
+    color: #1e293b;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+}
+
+/* Membrete Elegante */
+.report-header {
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 25px;
+    margin-bottom: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.report-header-title h1 {
+    font-size: 24px;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.report-header-badge {
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.report-section {
+    margin-bottom: 30px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.report-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.report-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.report-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.report-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.report-value.long-text {
+    align-items: flex-start;
+    line-height: 1.6;
+    padding: 15px;
+}
+
+/* Firmas Estilo Notaría */
+.signatures-wrapper {
+    margin-top: 50px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+}
+
+.signature-card {
+    text-align: center;
+}
+
+.signature-space {
+    height: 100px;
+    border-bottom: 1px solid #cbd5e1;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.signature-img {
+    max-height: 80px;
+    max-width: 100%;
+}
+
+.signature-meta {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+/* Footer de página */
+.report-footer {
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+/* Signature Help */
+.signature-hint {
+    font-size: 10px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.signature-hint svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Base Animations */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-slideIn {
+    animation: slideInRight 0.5s ease forwards;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.app-view:not(.hidden) {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Print Styles Optimizations */
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .app-view {
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+    }
+
+    #report-view,
+    #memory-container {
+        visibility: visible !important;
+        position: static !important;
+        width: 100% !important;
+    }
+}
+
+/* Status Badges */
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-finished {
+    background: #d1fae5;
+    color: #065f46;
+}

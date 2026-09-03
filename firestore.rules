@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para la colección de informes
+    match /finishedReports/{reportId} {
+      
+      // Permitir crear informes a cualquier usuario autenticado (incluye anónimos)
+      // Solo si el informe tiene el estado 'pending' inicialmente.
+      allow create: if request.auth != null 
+                    && request.resource.data.status == 'pending';
+      
+      // Permitir lectura a usuarios autenticados
+      allow read: if request.auth != null;
+      
+      // Permitir actualización:
+      // 1. Para pasar de 'pending' a 'finished' (finalizar parte)
+      // 2. Para ediciones generales si el usuario está autenticado
+      allow update: if request.auth != null;
+      
+      // Permitir borrar solo si está autenticado
+      allow delete: if request.auth != null;
+    }
+    
+    // Denegar cualquier otro acceso por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
