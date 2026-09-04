@@ -632,19 +632,187 @@ window.App = {
                 data = data.filter(r => (r.schoolYear || getSchoolYear(r.date)) === currentSchoolYearFilter);
             }
         }
-        if (!data.length) return showToast("No hay datos para exportar", true);
+        if (!data || !data.length) return showToast("No hay datos para exportar", true);
 
-        // Definición de columnas Pro con Curso Escolar incluido
+        const schoolName = localStorage.getItem('schoolName') || APP_CONFIG.DEFAULT_SCHOOL;
+        const coordinatorName = localStorage.getItem('coordinatorName') || APP_CONFIG.COORDINATOR_NAME;
+        const currentYearLabel = currentSchoolYearFilter !== 'all' ? currentSchoolYearFilter : 'Histórico Completo';
+
+        // Si SheetJS está disponible en window.XLSX, generamos el libro Excel nativo .xlsx
+        if (typeof XLSX !== 'undefined') {
+            try {
+                const wb = XLSX.utils.book_new();
+
+                if (singleReport) {
+                    // --- Ficha Individual en Excel ---
+                    const r = singleReport;
+                    const intervenerNames = (r.interveners && r.interveners.length)
+                        ? r.interveners.map(i => i.name).filter(Boolean).join(', ')
+                        : '---';
+
+                    const sheetData = [
+                        ["EXPEDIENTE OFICIAL DE ACCIDENTE ESCOLAR"],
+                        ["Centro Educativo:", schoolName],
+                        ["Coordinación de Salud:", coordinatorName],
+                        ["Fecha de Emisión:", new Date().toLocaleDateString('es-ES')],
+                        [],
+                        ["1. IDENTIFICACIÓN DEL ALUMNO/A", ""],
+                        ["Nombre Completo", r.fullName || '---'],
+                        ["Curso / Nivel", r.course || '---'],
+                        ["Curso Escolar", r.schoolYear || getSchoolYear(r.date)],
+                        [],
+                        ["2. DATOS DEL INCIDENTE", ""],
+                        ["Fecha del Suceso", r.date ? new Date(r.date).toLocaleDateString('es-ES') : '---'],
+                        ["Hora", r.time || '---'],
+                        ["Lugar / Ubicación", r.location || '---'],
+                        ["Nivel de Gravedad", r.severity || '---'],
+                        [],
+                        ["3. DESCRIPCIÓN DE LOS HECHOS", ""],
+                        ["Descripción Detallada", r.description || '---'],
+                        [],
+                        ["4. ACTUACIONES Y PROTOCOLO", ""],
+                        ["Actuaciones Realizadas", r.actionTaken || '---'],
+                        ["Aviso a la Familia", r.parentsCalled || '---'],
+                        ["Llamada al 112 (Emergencias)", r.emergencyCalled || '---'],
+                        [],
+                        ["5. VALIDACIÓN Y FIRMAS", ""],
+                        ["Personal Interviniente", intervenerNames],
+                        ["Coordinación de Salud", coordinatorName],
+                        ["Estado Administrativo", r.status === 'pending' ? 'Pendiente de Revisión' : 'Finalizado y Rubricado']
+                    ];
+
+                    const ws1 = XLSX.utils.aoa_to_sheet(sheetData);
+                    ws1['!cols'] = [{ wch: 28 }, { wch: 65 }];
+                    XLSX.utils.book_append_sheet(wb, ws1, "Ficha de Accidente");
+
+                    const safeName = (r.fullName || 'Alumno').trim().replace(/[\s/\\?%*:|"<>]/g, '_');
+                    const fileName = `Parte_${safeName}_${r.date || 'Registro'}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                    showToast("Ficha Excel (.xlsx) generada con éxito");
+                    return;
+                }
+
+                // --- Exportación General / Histórico ---
+                // Hoja 1: Registro Detallado
+                const headers = [
+                    "Nº",
+                    "ID Expediente",
+                    "Curso Escolar",
+                    "Fecha",
+                    "Hora",
+                    "Alumno/a",
+                    "Curso / Nivel",
+                    "Ubicación",
+                    "Gravedad",
+                    "Descripción de los Hechos",
+                    "Actuaciones Realizadas",
+                    "Aviso Familia",
+                    "Aviso 112",
+                    "Intervinientes",
+                    "Estado"
+                ];
+
+                const rows = data.map((r, idx) => [
+                    idx + 1,
+                    r.id ? String(r.id).slice(0, 10).toUpperCase() : '---',
+                    r.schoolYear || getSchoolYear(r.date),
+                    r.date ? new Date(r.date).toLocaleDateString('es-ES') : '---',
+                    r.time || '---',
+                    r.fullName || '---',
+                    r.course || '---',
+                    r.location || '---',
+                    r.severity || '---',
+                    r.description || '---',
+                    r.actionTaken || '---',
+                    r.parentsCalled || '---',
+                    r.emergencyCalled || '---',
+                    (r.interveners && r.interveners.length) ? r.interveners.map(i => i.name).filter(Boolean).join(', ') : '---',
+                    r.status === 'pending' ? 'PENDIENTE' : 'FINALIZADO'
+                ]);
+
+                const ws1 = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+                // Cálculo automático de anchos de columna
+                const colWidths = headers.map((h, colIdx) => {
+                    let maxLen = h.length;
+                    rows.forEach(row => {
+                        const val = row[colIdx] != null ? String(row[colIdx]) : '';
+                        if (val.length > maxLen) maxLen = Math.min(val.length, 55);
+                    });
+                    return { wch: Math.max(maxLen + 3, 10) };
+                });
+                ws1['!cols'] = colWidths;
+                XLSX.utils.book_append_sheet(wb, ws1, "Registro de Partes");
+
+                // Hoja 2: Resumen Ejecutivo y Estadísticas
+                const total = data.length;
+                const leves = data.filter(r => (r.severity || '').toLowerCase().includes('leve')).length;
+                const moderados = data.filter(r => (r.severity || '').toLowerCase().includes('moderad')).length;
+                const graves = data.filter(r => (r.severity || '').toLowerCase().includes('grave')).length;
+                const avisos112 = data.filter(r => ['sí', 'si'].includes(String(r.emergencyCalled || '').toLowerCase().trim())).length;
+                const avisosFamilia = data.filter(r => ['sí', 'si'].includes(String(r.parentsCalled || '').toLowerCase().trim())).length;
+
+                // Agrupaciones
+                const locMap = {};
+                data.forEach(r => {
+                    const loc = r.location || 'No especificada';
+                    locMap[loc] = (locMap[loc] || 0) + 1;
+                });
+
+                const courseMap = {};
+                data.forEach(r => {
+                    const c = r.course || 'No especificado';
+                    courseMap[c] = (courseMap[c] || 0) + 1;
+                });
+
+                const summaryData = [
+                    ["LIBRO OFICIAL DE ACCIDENTES - RESUMEN EJECUTIVO"],
+                    ["Centro Educativo:", schoolName],
+                    ["Coordinación de Salud:", coordinatorName],
+                    ["Curso Escolar Filtrado:", currentYearLabel],
+                    ["Fecha de Generación:", new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })],
+                    [],
+                    ["INDICADORES CLAVE (KPIs)", "CANTIDAD", "PORCENTAJE"],
+                    ["Total de Partes Registrados", total, "100%"],
+                    ["Accidentes Leves", leves, total ? ((leves / total) * 100).toFixed(1) + "%" : "0%"],
+                    ["Accidentes Moderados", moderados, total ? ((moderados / total) * 100).toFixed(1) + "%" : "0%"],
+                    ["Accidentes Graves", graves, total ? ((graves / total) * 100).toFixed(1) + "%" : "0%"],
+                    ["Avisos al 112 (Emergencias)", avisos112, total ? ((avisos112 / total) * 100).toFixed(1) + "%" : "0%"],
+                    ["Familias Notificadas", avisosFamilia, total ? ((avisosFamilia / total) * 100).toFixed(1) + "%" : "0%"],
+                    [],
+                    ["DISTRIBUCIÓN POR UBICACIÓN / ZONA", "Nº INCIDENCIAS", "PORCENTAJE"],
+                    ...Object.entries(locMap)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([loc, cnt]) => [loc, cnt, ((cnt / (total || 1)) * 100).toFixed(1) + "%"]),
+                    [],
+                    ["DISTRIBUCIÓN POR CURSO / NIVEL", "Nº INCIDENCIAS", "PORCENTAJE"],
+                    ...Object.entries(courseMap)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([c, cnt]) => [c, cnt, ((cnt / (total || 1)) * 100).toFixed(1) + "%"])
+                ];
+
+                const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+                ws2['!cols'] = [{ wch: 38 }, { wch: 18 }, { wch: 16 }];
+                XLSX.utils.book_append_sheet(wb, ws2, "Resumen y Estadísticas");
+
+                const safeYear = currentYearLabel.replace(/[\s/\\?%*:|"<>]/g, '_');
+                const fileName = `Libro_Accidentes_${safeYear}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                showToast("Libro Excel (.xlsx) generado con 2 hojas");
+                return;
+            } catch (err) {
+                console.error("Error generando XLSX con SheetJS, aplicando fallback CSV:", err);
+            }
+        }
+
+        // Fallback robusto a CSV UTF-8 con punto y coma si SheetJS no estuviese disponible
         const headers = ["ID", "Curso Escolar", "Fecha", "Hora", "Alumno", "Curso", "Ubicación", "Gravedad", "Descripción", "Actuaciones", "Aviso Familia", "Aviso 112", "Estado"];
-
-        // Función para limpiar y escapar texto para Excel (CSV con punto y coma)
         const clean = (val) => {
             if (val === undefined || val === null) return "";
-            let str = String(val).replace(/"/g, '""'); // Escapar comillas
-            str = str.replace(/\r?\n|\r/g, " "); // Eliminar saltos de línea para Excel
+            let str = String(val).replace(/"/g, '""');
+            str = str.replace(/\r?\n|\r/g, " ");
             return `"${str}"`;
         };
-
         const rows = data.map(r => [
             clean(r.id),
             clean(r.schoolYear || getSchoolYear(r.date)),
@@ -660,7 +828,6 @@ window.App = {
             clean(r.emergencyCalled),
             clean(r.status === 'pending' ? 'PENDIENTE' : 'FINALIZADO')
         ]);
-
         const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(";")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -668,72 +835,153 @@ window.App = {
         const fileNameYear = currentSchoolYearFilter !== 'all' ? currentSchoolYearFilter : 'TODOS_LOS_CURSOS';
         link.download = singleReport ? `parte_${singleReport.fullName.replace(/ /g, '_')}.csv` : `ACCIDENTES_${fileNameYear}.csv`;
         link.click();
-        showToast("Excel generado correctamente.");
+        showToast("Archivo exportado correctamente.");
     },
     exportPdf: async (reportId) => {
         const report = [...currentPendingReports, ...currentFinishedReports].find(r => r.id === reportId);
         if (!report) return;
 
         const btn = document.querySelector('button[onclick*="exportPdf"]');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = "Generando...";
+        const originalText = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generando PDF Oficial...</span>`;
+        }
+
+        const schoolName = localStorage.getItem('schoolName') || APP_CONFIG.DEFAULT_SCHOOL;
+        const schoolYear = report.schoolYear || getSchoolYear(report.date);
 
         try {
             const container = document.getElementById('report-view');
-
             const clone = container.cloneNode(true);
             clone.style.position = 'fixed';
             clone.style.left = '-9999px';
             clone.style.top = '0';
-            clone.style.background = 'white';
+            clone.style.width = '800px';
+            clone.style.background = '#ffffff';
             clone.classList.remove('hidden');
             document.body.appendChild(clone);
 
+            renderFinalReport(report, clone);
+
+            // Asegurar que el nombre del centro esté en el clon
+            clone.querySelectorAll('.school-name-text').forEach(el => el.textContent = schoolName);
+
+            // Esperar carga de todas las imágenes / firmas en el clon
             await Promise.all(Array.from(clone.querySelectorAll('img')).map(img => {
                 if (img.complete) return Promise.resolve();
                 return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
             }));
 
-            const mainCanvas = await html2canvas(clone.querySelector('.report-page'), {
+            // Breve espera para renderizado de fuentes y estilos
+            await new Promise(r => setTimeout(r, 200));
+
+            const reportPageEl = clone.querySelector('.report-page');
+            const canvas = await html2canvas(reportPageEl, {
                 scale: 2,
                 useCORS: true,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                windowWidth: 1000
             });
 
             const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
+            const pageWidth = pdf.internal.pageSize.getWidth(); // 210
+            const pageHeight = pdf.internal.pageSize.getHeight(); // 297
 
-            const pxToMm = pageWidth / mainCanvas.width;
-            const pxPageHeight = pageHeight / pxToMm;
+            // Márgenes profesionales
+            const marginX = 14;
+            const marginTop = 18;
+            const marginBottom = 15;
+            const printableWidth = pageWidth - (marginX * 2); // 182 mm
+            const printableHeight = pageHeight - marginTop - marginBottom; // 264 mm
 
-            let currentFullHeight = 0;
+            const imgWidthMm = printableWidth;
+            const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
 
-            while (currentFullHeight < mainCanvas.height) {
-                const pageCanvas = document.createElement('canvas');
-                pageCanvas.width = mainCanvas.width;
-                pageCanvas.height = Math.min(pxPageHeight, mainCanvas.height - currentFullHeight);
+            if (imgHeightMm <= printableHeight) {
+                // Cabe perfectamente en una sola página con encuadre institucional
+                // Encabezado institucional
+                pdf.setFillColor(37, 99, 235);
+                pdf.rect(0, 0, pageWidth, 4, 'F');
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(8);
+                pdf.setTextColor(100, 116, 139);
+                pdf.text(`PARTE OFICIAL DE ACCIDENTE • ${schoolName.toUpperCase()} • CURSO ${schoolYear}`, marginX, 12);
+                pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.4);
+                pdf.line(marginX, 14, pageWidth - marginX, 14);
 
-                const ctx = pageCanvas.getContext('2d');
-                ctx.drawImage(mainCanvas, 0, currentFullHeight, mainCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.96), 'JPEG', marginX, marginTop, imgWidthMm, imgHeightMm);
 
-                const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
-                pdf.addImage(pageImgData, 'JPEG', 0, 0, pageWidth, (pageCanvas.height * pxToMm));
+                // Pie de página institucional
+                pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.4);
+                pdf.line(marginX, pageHeight - 11, pageWidth - marginX, pageHeight - 11);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(7.5);
+                pdf.setTextColor(148, 163, 184);
+                pdf.text(`Documento oficial de diligencia escolar • Generado el ${new Date().toLocaleDateString('es-ES')}`, marginX, pageHeight - 6);
+                pdf.text("Página 1 de 1", pageWidth - marginX, pageHeight - 6, { align: 'right' });
+            } else {
+                // Multi-página por si el informe fuese muy extenso
+                const pxToMm = imgWidthMm / canvas.width;
+                const pxPageHeight = printableHeight / pxToMm;
+                let currentY = 0;
+                let pageIndex = 1;
+                const totalPagesEst = Math.ceil(canvas.height / pxPageHeight);
 
-                currentFullHeight += pxPageHeight;
-                if (currentFullHeight < mainCanvas.height) pdf.addPage();
+                while (currentY < canvas.height) {
+                    if (pageIndex > 1) pdf.addPage();
+
+                    // Encabezado
+                    pdf.setFillColor(37, 99, 235);
+                    pdf.rect(0, 0, pageWidth, 4, 'F');
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(100, 116, 139);
+                    pdf.text(`PARTE OFICIAL DE ACCIDENTE • ${schoolName.toUpperCase()} • CURSO ${schoolYear}`, marginX, 12);
+                    pdf.setDrawColor(226, 232, 240);
+                    pdf.setLineWidth(0.4);
+                    pdf.line(marginX, 14, pageWidth - marginX, 14);
+
+                    // Rebanada de canvas
+                    const sliceHeight = Math.min(pxPageHeight, canvas.height - currentY);
+                    const pageCanvas = document.createElement('canvas');
+                    pageCanvas.width = canvas.width;
+                    pageCanvas.height = sliceHeight;
+                    const ctx = pageCanvas.getContext('2d');
+                    ctx.drawImage(canvas, 0, currentY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+                    const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+                    pdf.addImage(pageImgData, 'JPEG', marginX, marginTop, imgWidthMm, sliceHeight * pxToMm);
+
+                    // Pie de página
+                    pdf.setDrawColor(226, 232, 240);
+                    pdf.setLineWidth(0.4);
+                    pdf.line(marginX, pageHeight - 11, pageWidth - marginX, pageHeight - 11);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7.5);
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.text(`Documento oficial • Alumno: ${report.fullName || ''}`, marginX, pageHeight - 6);
+                    pdf.text(`Página ${pageIndex} de ${totalPagesEst}`, pageWidth - marginX, pageHeight - 6, { align: 'right' });
+
+                    currentY += pxPageHeight;
+                    pageIndex++;
+                }
             }
 
-            pdf.save(`Expediente_${report.fullName.replace(/ /g, '_')}.pdf`);
+            const cleanName = (report.fullName || 'Alumno').trim().replace(/[\s/\\?%*:|"<>]/g, '_');
+            pdf.save(`Expediente_${cleanName}_${report.date || ''}.pdf`);
             document.body.removeChild(clone);
-            showToast("PDF generado correctamente.");
+            showToast("Expediente PDF oficial generado.");
         } catch (err) {
-            console.error(err);
-            showToast("Error en PDF", true);
+            console.error("Error en exportPdf:", err);
+            showToast("Error al expedir PDF", true);
         } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
     },
     exportBulkPdf: async () => {
@@ -741,69 +989,404 @@ window.App = {
         if (currentSchoolYearFilter && currentSchoolYearFilter !== 'all') {
             data = data.filter(r => (r.schoolYear || getSchoolYear(r.date)) === currentSchoolYearFilter);
         }
-        if (!data.length) return showToast("No hay informes para exportar en este curso", true);
+        if (!data || !data.length) {
+            return showToast("No hay informes para exportar en este curso", true);
+        }
 
         const btn = document.getElementById('bulk-pdf-btn');
-        btn.disabled = true;
-        const originalContent = btn.innerHTML;
+        const originalContent = btn ? btn.innerHTML : '';
+        if (btn) btn.disabled = true;
+
+        const schoolName = localStorage.getItem('schoolName') || APP_CONFIG.DEFAULT_SCHOOL;
+        const coordinatorName = localStorage.getItem('coordinatorName') || APP_CONFIG.COORDINATOR_NAME;
+        const yearLabel = currentSchoolYearFilter !== 'all' ? currentSchoolYearFilter : 'Histórico Completo';
 
         try {
-            showToast("Generando archivo masivo. No cierres la página...");
+            showToast("Iniciando compilación del Dossier Oficial...", false);
             const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth(); // 210
+            const pageHeight = pdf.internal.pageSize.getHeight(); // 297
+            const marginX = 15;
+
+            // Métricas para Portada
+            const total = data.length;
+            const leves = data.filter(r => (r.severity || '').toLowerCase().includes('leve')).length;
+            const moderados = data.filter(r => (r.severity || '').toLowerCase().includes('moderad')).length;
+            const graves = data.filter(r => (r.severity || '').toLowerCase().includes('grave')).length;
+            const avisos112 = data.filter(r => ['sí', 'si'].includes(String(r.emergencyCalled || '').toLowerCase().trim())).length;
+            const avisosFamilia = data.filter(r => ['sí', 'si'].includes(String(r.parentsCalled || '').toLowerCase().trim())).length;
+
+            // ==========================================
+            // PÁGINA 1: PORTADA INSTITUCIONAL
+            // ==========================================
+            // Franja superior en azul corporativo
+            pdf.setFillColor(30, 58, 138); // Blue 900
+            pdf.rect(0, 0, pageWidth, 18, 'F');
+            pdf.setFillColor(37, 99, 235); // Blue 600
+            pdf.rect(0, 18, pageWidth, 3, 'F');
+
+            // Encabezado institucional
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(9);
+            pdf.setTextColor(255, 255, 255);
+            pdf.text("SISTEMA DE GESTIÓN DE SALUD Y SEGURIDAD ESCOLAR", 105, 11, { align: 'center' });
+
+            // Badge / Sub-marca
+            pdf.setFillColor(239, 246, 255);
+            pdf.setDrawColor(191, 219, 254);
+            pdf.roundedRect(marginX, 38, pageWidth - (marginX * 2), 22, 3, 3, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(11);
+            pdf.setTextColor(29, 78, 216);
+            pdf.text(schoolName.toUpperCase(), 105, 49, { align: 'center' });
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(8);
+            pdf.setTextColor(71, 85, 105);
+            pdf.text("Registro Oficial de Diligencias y Protocolos de Accidente Escolar", 105, 55, { align: 'center' });
+
+            // Título Principal
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(23);
+            pdf.setTextColor(15, 23, 42); // Slate 900
+            pdf.text("DOSSIER OFICIAL", 105, 82, { align: 'center' });
+            pdf.setFontSize(15);
+            pdf.setTextColor(37, 99, 235); // Blue 600
+            pdf.text("LIBRO DE REGISTRO DE ACCIDENTES", 105, 91, { align: 'center' });
+
+            // Línea divisoria elegante
+            pdf.setDrawColor(203, 213, 225);
+            pdf.setLineWidth(0.6);
+            pdf.line(50, 98, 160, 98);
+
+            // Tarjeta de Metadatos Institucionales
+            const cardY = 108;
+            const cardHeight = 65;
+            pdf.setFillColor(248, 250, 252);
+            pdf.setDrawColor(226, 232, 240);
+            pdf.setLineWidth(0.5);
+            pdf.roundedRect(marginX, cardY, pageWidth - (marginX * 2), cardHeight, 4, 4, 'FD');
+
+            // Encabezado de la tarjeta
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8.5);
+            pdf.setTextColor(100, 116, 139);
+            pdf.text("DATOS DEL EXPEDIENTE Y CUSTODIA", marginX + 8, cardY + 11);
+
+            pdf.setDrawColor(241, 245, 249);
+            pdf.line(marginX + 8, cardY + 14, pageWidth - marginX - 8, cardY + 14);
+
+            // Contenido de la tarjeta en dos columnas
+            const drawMetaRow = (label, val, yPos) => {
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(9);
+                pdf.setTextColor(71, 85, 105);
+                pdf.text(label, marginX + 8, yPos);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setTextColor(15, 23, 42);
+                pdf.text(String(val), marginX + 62, yPos);
+            };
+
+            drawMetaRow("Centro Educativo:", schoolName, cardY + 23);
+            drawMetaRow("Curso Escolar:", yearLabel, cardY + 31);
+            drawMetaRow("Total Expedientes:", `${total} partes rubricados y archivados`, cardY + 39);
+            drawMetaRow("Coordinación de Salud:", coordinatorName, cardY + 47);
+            drawMetaRow("Fecha de Expedición:", new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), cardY + 55);
+
+            // Cajas de Estadísticas Resumidas (KPI Pills)
+            const kpiY = 183;
+            const kpiWidth = (pageWidth - (marginX * 2) - 9) / 4;
+            const kpiHeight = 26;
+
+            // KPI 1: Leves
+            pdf.setFillColor(240, 253, 244); // Emerald 50
+            pdf.setDrawColor(187, 247, 208);
+            pdf.roundedRect(marginX, kpiY, kpiWidth, kpiHeight, 3, 3, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(14);
+            pdf.setTextColor(22, 101, 52);
+            pdf.text(String(leves), marginX + (kpiWidth / 2), kpiY + 11, { align: 'center' });
+            pdf.setFontSize(7.5);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(21, 128, 61);
+            pdf.text("LEVES", marginX + (kpiWidth / 2), kpiY + 18, { align: 'center' });
+            pdf.setFontSize(6.5);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(total ? `${Math.round((leves / total) * 100)}% del total` : "0%", marginX + (kpiWidth / 2), kpiY + 22, { align: 'center' });
+
+            // KPI 2: Moderados
+            const kpi2X = marginX + kpiWidth + 3;
+            pdf.setFillColor(254, 252, 232); // Yellow 50
+            pdf.setDrawColor(254, 240, 138);
+            pdf.roundedRect(kpi2X, kpiY, kpiWidth, kpiHeight, 3, 3, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(14);
+            pdf.setTextColor(133, 77, 14);
+            pdf.text(String(moderados), kpi2X + (kpiWidth / 2), kpiY + 11, { align: 'center' });
+            pdf.setFontSize(7.5);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(161, 98, 7);
+            pdf.text("MODERADOS", kpi2X + (kpiWidth / 2), kpiY + 18, { align: 'center' });
+            pdf.setFontSize(6.5);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(total ? `${Math.round((moderados / total) * 100)}% del total` : "0%", kpi2X + (kpiWidth / 2), kpiY + 22, { align: 'center' });
+
+            // KPI 3: Graves
+            const kpi3X = kpi2X + kpiWidth + 3;
+            pdf.setFillColor(254, 242, 242); // Red 50
+            pdf.setDrawColor(254, 202, 202);
+            pdf.roundedRect(kpi3X, kpiY, kpiWidth, kpiHeight, 3, 3, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(14);
+            pdf.setTextColor(153, 27, 27);
+            pdf.text(String(graves), kpi3X + (kpiWidth / 2), kpiY + 11, { align: 'center' });
+            pdf.setFontSize(7.5);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(185, 28, 28);
+            pdf.text("GRAVES", kpi3X + (kpiWidth / 2), kpiY + 18, { align: 'center' });
+            pdf.setFontSize(6.5);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(total ? `${Math.round((graves / total) * 100)}% del total` : "0%", kpi3X + (kpiWidth / 2), kpiY + 22, { align: 'center' });
+
+            // KPI 4: Aviso 112
+            const kpi4X = kpi3X + kpiWidth + 3;
+            pdf.setFillColor(238, 242, 255); // Indigo 50
+            pdf.setDrawColor(199, 210, 254);
+            pdf.roundedRect(kpi4X, kpiY, kpiWidth, kpiHeight, 3, 3, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(14);
+            pdf.setTextColor(55, 48, 163);
+            pdf.text(String(avisos112), kpi4X + (kpiWidth / 2), kpiY + 11, { align: 'center' });
+            pdf.setFontSize(7.5);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(67, 56, 202);
+            pdf.text("AVISO 112", kpi4X + (kpiWidth / 2), kpiY + 18, { align: 'center' });
+            pdf.setFontSize(6.5);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`${avisosFamilia} con familia`, kpi4X + (kpiWidth / 2), kpiY + 22, { align: 'center' });
+
+            // Sello de Garantía y Validez
+            pdf.setFillColor(241, 245, 249);
+            pdf.roundedRect(marginX, 220, pageWidth - (marginX * 2), 34, 3, 3, 'F');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8);
+            pdf.setTextColor(71, 85, 105);
+            pdf.text("CERTIFICACIÓN Y DILIGENCIA DE ARCHIVO", marginX + 8, 229);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7.5);
+            pdf.setTextColor(100, 116, 139);
+            pdf.text("El presente documento reúne los partes de accidente escolar registrados y tramitados telemáticamente con firma manuscrita digitalizada.", marginX + 8, 236);
+            pdf.text("Queda archivado para su custodia por el Equipo Directivo, Consejo Escolar e Inspección Técnica Educativa.", marginX + 8, 242);
+            pdf.text(`Identificador de Compilación: DOS-${Date.now().toString(36).toUpperCase()} • Expedido el ${new Date().toLocaleDateString('es-ES')}`, marginX + 8, 248);
+
+            // Franja inferior con nota legal RGPD
+            pdf.setFillColor(15, 23, 42); // Slate 900
+            pdf.rect(0, 283, pageWidth, 14, 'F');
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7);
+            pdf.setTextColor(203, 213, 225);
+            pdf.text("DOCUMENTO OFICIAL CONFIDENCIAL • PROTEGIDO POR LA LEY ORGÁNICA DE PROTECCIÓN DE DATOS (RGPD / LOMLOE)", 105, 291, { align: 'center' });
+
+            // ==========================================
+            // PÁGINA 2+: ÍNDICE GENERAL DE EXPEDIENTES
+            // ==========================================
+            const rowsPerPage = 18;
+            const indexPages = Math.ceil(data.length / rowsPerPage);
+
+            for (let idxP = 0; idxP < indexPages; idxP++) {
+                pdf.addPage();
+
+                // Cabecera superior institucional
+                pdf.setFillColor(30, 58, 138);
+                pdf.rect(0, 0, pageWidth, 4, 'F');
+
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(14);
+                pdf.setTextColor(15, 23, 42);
+                pdf.text("ÍNDICE GENERAL DE EXPEDIENTES", marginX, 16);
+
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(8.5);
+                pdf.setTextColor(100, 116, 139);
+                pdf.text(`${schoolName} • Curso Escolar: ${yearLabel} (Página de índice ${idxP + 1} de ${indexPages})`, marginX, 22);
+
+                pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.4);
+                pdf.line(marginX, 25, pageWidth - marginX, 25);
+
+                // Cabecera de la tabla de índice
+                const tableY = 30;
+                pdf.setFillColor(15, 23, 42); // Slate 900
+                pdf.rect(marginX, tableY, pageWidth - (marginX * 2), 8, 'F');
+
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7.5);
+                pdf.setTextColor(255, 255, 255);
+                pdf.text("Nº", marginX + 3, tableY + 5.5);
+                pdf.text("FECHA", marginX + 12, tableY + 5.5);
+                pdf.text("ALUMNO/A", marginX + 34, tableY + 5.5);
+                pdf.text("CURSO", marginX + 90, tableY + 5.5);
+                pdf.text("UBICACIÓN", marginX + 115, tableY + 5.5);
+                pdf.text("GRAVEDAD", marginX + 147, tableY + 5.5);
+                pdf.text("112", marginX + 171, tableY + 5.5);
+
+                // Filas de la tabla
+                const sliceData = data.slice(idxP * rowsPerPage, (idxP + 1) * rowsPerPage);
+                let rowY = tableY + 8;
+
+                sliceData.forEach((r, rIdx) => {
+                    const globalIdx = (idxP * rowsPerPage) + rIdx + 1;
+                    const isEven = rIdx % 2 === 0;
+
+                    // Fondo de fila alternado
+                    pdf.setFillColor(isEven ? 255 : 248, isEven ? 255 : 250, isEven ? 255 : 252);
+                    pdf.rect(marginX, rowY, pageWidth - (marginX * 2), 9, 'F');
+
+                    pdf.setDrawColor(241, 245, 249);
+                    pdf.line(marginX, rowY + 9, pageWidth - marginX, rowY + 9);
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(7.5);
+                    pdf.setTextColor(71, 85, 105);
+                    pdf.text(String(globalIdx), marginX + 3, rowY + 6);
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.text(r.date ? new Date(r.date).toLocaleDateString('es-ES') : '---', marginX + 12, rowY + 6);
+
+                    // Alumno (cortar si es muy largo)
+                    const studentName = String(r.fullName || '---').slice(0, 26);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(studentName, marginX + 34, rowY + 6);
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.text(String(r.course || '---').slice(0, 14), marginX + 90, rowY + 6);
+                    pdf.text(String(r.location || '---').slice(0, 18), marginX + 115, rowY + 6);
+
+                    // Gravedad con color
+                    const sev = String(r.severity || 'Leve');
+                    if (sev.toLowerCase().includes('grave')) {
+                        pdf.setTextColor(220, 38, 38);
+                        pdf.setFont('helvetica', 'bold');
+                    } else if (sev.toLowerCase().includes('moderad')) {
+                        pdf.setTextColor(217, 119, 6);
+                        pdf.setFont('helvetica', 'bold');
+                    } else {
+                        pdf.setTextColor(22, 101, 52);
+                        pdf.setFont('helvetica', 'normal');
+                    }
+                    pdf.text(sev, marginX + 147, rowY + 6);
+
+                    // 112
+                    const is112 = ['sí', 'si'].includes(String(r.emergencyCalled || '').toLowerCase().trim());
+                    pdf.setTextColor(is112 ? 220 : 148, is112 ? 38 : 163, is112 ? 38 : 184);
+                    pdf.setFont('helvetica', is112 ? 'bold' : 'normal');
+                    pdf.text(is112 ? "SÍ" : "No", marginX + 172, rowY + 6);
+
+                    rowY += 9;
+                });
+            }
+
+            // ==========================================
+            // EXPEDIENTES INDIVIDUALES
+            // ==========================================
             const container = document.getElementById('report-view');
             const clone = container.cloneNode(true);
             clone.style.position = 'fixed';
             clone.style.left = '-9999px';
             clone.style.top = '0';
+            clone.style.width = '800px';
+            clone.style.background = '#ffffff';
             clone.classList.remove('hidden');
             document.body.appendChild(clone);
 
             for (let i = 0; i < data.length; i++) {
-                btn.innerHTML = `⏳ ${i + 1}/${data.length}`;
+                if (btn) btn.innerHTML = `⏳ Compilando ${i + 1}/${data.length}...`;
 
                 renderFinalReport(data[i], clone);
+                clone.querySelectorAll('.school-name-text').forEach(el => el.textContent = schoolName);
 
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 150));
 
                 await Promise.all(Array.from(clone.querySelectorAll('img')).map(img => {
                     if (img.complete) return Promise.resolve();
                     return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
                 }));
 
-                const canvas = await html2canvas(clone.querySelector('.report-page'), { scale: 1.5, useCORS: true, windowWidth: 1200 });
-                const imgWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                const reportPageEl = clone.querySelector('.report-page');
+                const canvas = await html2canvas(reportPageEl, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    windowWidth: 1000
+                });
 
-                let heightLeft = imgHeight;
-                let position = 0;
+                pdf.addPage();
 
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
+                // Cabecera institucional de página
+                pdf.setFillColor(37, 99, 235);
+                pdf.rect(0, 0, pageWidth, 4, 'F');
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7.5);
+                pdf.setTextColor(100, 116, 139);
+                pdf.text(`DOSSIER OFICIAL • ${schoolName.toUpperCase()} • CURSO ${yearLabel}`, marginX, 11);
+                pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.4);
+                pdf.line(marginX, 13, pageWidth - marginX, 13);
 
-                while (heightLeft > 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
+                // Dimensiones del reporte
+                const printableWidth = pageWidth - (marginX * 2); // 180mm
+                const maxAvailableHeight = pageHeight - 16 - 15; // 266mm
+                const imgHeightMm = (canvas.height * printableWidth) / canvas.width;
+
+                if (imgHeightMm <= maxAvailableHeight) {
+                    // Centrado vertical limpio
+                    const posY = 16 + ((maxAvailableHeight - imgHeightMm) / 4);
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', marginX, Math.max(16, posY), printableWidth, imgHeightMm);
+                } else {
+                    // Si excede, escalar proporcionalmente para encajar en la página
+                    const scaleFactor = maxAvailableHeight / imgHeightMm;
+                    const scaledWidth = printableWidth * scaleFactor;
+                    const offsetX = marginX + ((printableWidth - scaledWidth) / 2);
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', offsetX, 16, scaledWidth, maxAvailableHeight);
                 }
 
-                if (i < data.length - 1) pdf.addPage();
+                // Pie de página de expediente
+                pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.4);
+                pdf.line(marginX, pageHeight - 11, pageWidth - marginX, pageHeight - 11);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(7.5);
+                pdf.setTextColor(148, 163, 184);
+                const expedLabel = `Expediente nº ${i + 1}: ${(data[i].fullName || 'Alumno').toUpperCase()} (${data[i].date ? new Date(data[i].date).toLocaleDateString('es-ES') : ''})`;
+                pdf.text(expedLabel, marginX, pageHeight - 6);
             }
 
-            const fileNameYear = currentSchoolYearFilter !== 'all' ? currentSchoolYearFilter : 'Completo';
-            pdf.save(`Expedientes_${fileNameYear}_${new Date().toISOString().slice(0, 10)}.pdf`);
             document.body.removeChild(clone);
-            showToast("Exportación masiva PDF completada.");
+
+            // ==========================================
+            // PASO FINAL: NUMERACIÓN CORRELATIVA DE PÁGINAS
+            // ==========================================
+            const totalPages = pdf.getNumberOfPages();
+            for (let p = 2; p <= totalPages; p++) {
+                pdf.setPage(p);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(7.5);
+                pdf.setTextColor(148, 163, 184);
+                pdf.text(`Página ${p} de ${totalPages}`, pageWidth - marginX, pageHeight - 6, { align: 'right' });
+            }
+
+            const safeYear = yearLabel.replace(/[\s/\\?%*:|"<>]/g, '_');
+            const pdfName = `Dossier_Oficial_Accidentes_${safeYear}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            pdf.save(pdfName);
+            showToast(`Dossier oficial generado con éxito (${total} expedientes).`);
         } catch (err) {
-            console.error(err);
-            showToast("Error en exportación masiva", true);
+            console.error("Error al generar Dossier PDF:", err);
+            showToast("Error al generar el dossier PDF oficial", true);
         } finally {
-            container.style.position = '';
-            container.style.left = '';
-            container.classList.add('hidden');
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
+            if (btn) {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
         }
     }
 };
@@ -839,46 +1422,59 @@ const fillForm = (report) => {
 };
 
 const renderFinalReport = (data, targetContainer = document) => {
-    targetContainer.querySelector('#report-fullName').textContent = data.fullName;
-    targetContainer.querySelector('#report-course').textContent = data.course;
+    targetContainer.querySelector('#report-fullName').textContent = data.fullName || '---';
+    targetContainer.querySelector('#report-course').textContent = data.course || '---';
     const formattedDate = data.date ? new Date(data.date).toLocaleDateString('es-ES') : '---';
     targetContainer.querySelector('#report-accident-date').textContent = formattedDate;
-    targetContainer.querySelector('#report-location').textContent = data.location;
-    targetContainer.querySelector('#report-time').textContent = data.time;
-    targetContainer.querySelector('#report-severity').textContent = data.severity;
+    targetContainer.querySelector('#report-location').textContent = data.location || '---';
+    targetContainer.querySelector('#report-time').textContent = data.time || '---';
+    targetContainer.querySelector('#report-severity').textContent = data.severity || '---';
     
     const yearEl = targetContainer.querySelector('#report-schoolYear');
     if (yearEl) {
         yearEl.textContent = data.schoolYear || getSchoolYear(data.date);
     }
 
-    targetContainer.querySelector('#report-description').textContent = data.description;
-    targetContainer.querySelector('#report-actionTaken').textContent = data.actionTaken;
-    targetContainer.querySelector('#report-parentsCalled').textContent = data.parentsCalled;
-    targetContainer.querySelector('#report-emergencyCalled').textContent = data.emergencyCalled;
+    targetContainer.querySelector('#report-description').textContent = data.description || '---';
+    targetContainer.querySelector('#report-actionTaken').textContent = data.actionTaken || '---';
+    targetContainer.querySelector('#report-parentsCalled').textContent = data.parentsCalled || '---';
+    targetContainer.querySelector('#report-emergencyCalled').textContent = data.emergencyCalled || '---';
 
     const sigs = targetContainer.querySelector('#report-signatures-container');
-    sigs.innerHTML = '';
+    if (sigs) {
+        sigs.innerHTML = '';
 
-    data.interveners.forEach(int => {
-        sigs.innerHTML += `
-            <div class="signature-card">
-                <div class="signature-space">
-                    <img src="${int.signature}" class="signature-img">
+        if (data.interveners && Array.isArray(data.interveners)) {
+            data.interveners.forEach(int => {
+                if (int && int.signature) {
+                    sigs.innerHTML += `
+                        <div class="signature-card">
+                            <div class="signature-space">
+                                <img src="${int.signature}" class="signature-img" alt="Firma ${int.name || 'Interviniente'}">
+                            </div>
+                            <div class="signature-meta">Interviniente: ${int.name || '---'}</div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        const coordName = localStorage.getItem('coordinatorName') || APP_CONFIG.COORDINATOR_NAME;
+        if (data.coordinatorSignature) {
+            sigs.innerHTML += `
+                <div class="signature-card">
+                    <div class="signature-space">
+                        <img src="${data.coordinatorSignature}" class="signature-img" alt="Firma Coordinación">
+                    </div>
+                    <div class="signature-meta">Coordinación: ${coordName}</div>
                 </div>
-                <div class="signature-meta">Interviniente: ${int.name}</div>
-            </div>
-        `;
-    });
+            `;
+        }
+    }
 
-    sigs.innerHTML += `
-        <div class="signature-card">
-            <div class="signature-space">
-                <img src="${data.coordinatorSignature}" class="signature-img">
-            </div>
-            <div class="signature-meta">Coordinador: Orestes G.V.</div>
-        </div>
-    `;
+    // Actualizar nombre de centro educativo en el informe
+    const currentSchool = localStorage.getItem('schoolName') || APP_CONFIG.DEFAULT_SCHOOL;
+    targetContainer.querySelectorAll('.school-name-text').forEach(el => el.textContent = currentSchool);
 };
 
 // --- Event Listeners Globales ---

@@ -19,6 +19,8 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- SheetJS (Excel .xlsx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- EmailJS -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
@@ -429,18 +431,29 @@
                     <h2 class="text-3xl font-black text-slate-800">Archivo Histórico</h2>
                     <p class="text-slate-400 text-sm font-medium" id="finished-count-summary">Partes finalizados y archivados</p>
                 </div>
-                <div class="flex flex-wrap gap-2 items-center">
+                <div class="flex flex-wrap gap-2.5 items-center">
                     <button id="download-csv-btn"
-                        class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 shadow-sm transition-all font-bold text-sm">
-                        <svg class="w-4 h-4">
-                            <use xlink:href="#icon-plus"></use>
-                        </svg>Excel Pro
+                        class="group flex items-center gap-2.5 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-800 hover:text-white rounded-xl font-bold text-sm shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
+                        title="Exportar archivo estructurado Microsoft Excel (.xlsx) con hoja de datos y resumen estadístico">
+                        <svg class="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <path d="M8 13l3 4M11 13l-3 4"></path>
+                            <path d="M14 13h3M14 17h3"></path>
+                        </svg>
+                        <span>Exportar Excel (.xlsx)</span>
                     </button>
                     <button id="bulk-pdf-btn"
-                        class="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 shadow-lg shadow-red-100 transition-all font-bold text-sm">
-                        <svg class="w-4 h-4">
-                            <use xlink:href="#icon-pdf"></use>
-                        </svg>PDF Masivo
+                        class="group flex items-center gap-2.5 px-4 py-2.5 bg-slate-900 hover:bg-blue-600 text-white rounded-xl font-bold text-sm shadow-sm hover:shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
+                        title="Generar dossier institucional encuadernado en PDF con portada, índice de expedientes y partes firmados">
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <span>Dossier PDF Oficial</span>
                     </button>
                 </div>
             </div>
@@ -579,15 +592,23 @@
                 <button onclick="App.switchView('finished-container')"
                     class="px-6 py-3 text-slate-400 font-bold hover:text-slate-600 transition-all">Regresar</button>
                 <button onclick="App.exportToExcel(App.currentReportData)"
-                    class="px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold flex items-center gap-2"><svg
-                        class="w-4 h-4">
-                        <use xlink:href="#icon-plus"></use>
-                    </svg>CSV Pro</button>
+                    class="group flex items-center gap-2 px-6 py-3 bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-800 hover:text-white rounded-xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer">
+                    <svg class="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <path d="M8 13l3 4M11 13l-3 4"></path>
+                    </svg>
+                    <span>Ficha Excel (.xlsx)</span>
+                </button>
                 <button onclick="App.exportPdf(App.currentReportId)"
-                    class="px-8 py-3 bg-blue-600 text-white font-black rounded-xl shadow-lg shadow-blue-200 flex items-center gap-2">
-                    <svg class="w-4 h-4">
-                        <use xlink:href="#icon-pdf"></use>
-                    </svg>Expedir PDF
+                    class="group flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 cursor-pointer">
+                    <svg class="w-4 h-4 text-blue-200 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    <span>Expedir PDF Oficial</span>
                 </button>
             </div>
         </div>
