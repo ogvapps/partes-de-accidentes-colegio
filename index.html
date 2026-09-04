@@ -151,6 +151,29 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center justify-center gap-2.5">
+                <!-- Offline Badge & Sync -->
+                <div id="offline-status-badge" class="hidden flex items-center gap-2 px-3.5 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold">
+                    <svg class="w-4 h-4 text-amber-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+                        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+                        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+                        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                    </svg>
+                    <span>Modo Patio (Sin red)</span>
+                    <span id="offline-queue-counter" class="hidden px-2 py-0.5 bg-amber-200 text-amber-950 rounded-full text-[10px] font-extrabold">0 pendientes</span>
+                </div>
+                <button id="sync-offline-now-btn" onclick="App.syncOfflineQueue()"
+                    class="hidden flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                    <span>Sincronizar (<span id="sync-btn-count">0</span>)</span>
+                </button>
                 <button id="pwa-header-install-btn" onclick="App.triggerInstallPrompt()"
                     class="group flex items-center gap-2 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-blue-700 hover:text-white rounded-xl font-bold text-xs shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
                     title="Descargar e instalar la app en tu escritorio o pantalla de inicio">
@@ -275,17 +298,22 @@
 
                 <!-- Section 1 -->
                 <section class="grid md:grid-cols-2 gap-8">
-                    <div class="col-span-full text-xs font-bold uppercase text-blue-500 tracking-widest">1.
-                        Identificación del Alumno</div>
-                    <div class="space-y-2">
+                    <div class="col-span-full text-xs font-bold uppercase text-blue-500 tracking-widest flex items-center justify-between">
+                        <span>1. Identificación del Alumno/a</span>
+                        <span id="census-status-indicator" class="text-[10px] font-bold text-slate-400 normal-case"></span>
+                    </div>
+                    <div class="space-y-2 relative">
                         <label class="block text-sm font-semibold text-slate-700">Nombre y Apellidos</label>
-                        <input type="text" name="fullName"
+                        <input type="text" name="fullName" id="accident-fullName" autocomplete="off"
                             class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                            placeholder="Escribe para buscar alumno/a..."
                             required>
+                        <!-- Desplegable reactivo de autocompletado -->
+                        <div id="student-suggestions-container" class="typeahead-dropdown hidden"></div>
                     </div>
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">Curso</label>
-                        <select name="course"
+                        <select name="course" id="accident-course"
                             class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none appearance-none"
                             required>
                             <option value="">Seleccionar curso...</option>
@@ -303,6 +331,38 @@
                             <option value="3º ESO">3º ESO</option>
                             <option value="4º ESO">4º ESO</option>
                         </select>
+                    </div>
+
+                    <!-- Tarjeta de Alerta Médica y Ficha de Salud -->
+                    <div id="student-health-alert-box" class="col-span-full hidden health-alert-box">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
+                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-black uppercase tracking-wider text-amber-900">Alerta Médica de Salud</span>
+                                        <span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 text-[10px] font-extrabold uppercase">Ficha de Salud</span>
+                                    </div>
+                                    <div id="student-health-alert-details" class="text-xs text-amber-950 mt-1 space-y-1 font-medium leading-relaxed">
+                                        <!-- Generado dinámicamente -->
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" onclick="document.getElementById('student-health-alert-box').classList.add('hidden')"
+                                class="text-amber-700 hover:text-amber-900 p-1 rounded-lg hover:bg-amber-200/50 transition-colors cursor-pointer"
+                                title="Ocultar aviso">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -693,8 +753,53 @@
                 </div>
                 <div class="col-span-full pt-4">
                     <button onclick="App.saveSettings()"
-                        class="w-full py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-600 shadow-lg shadow-emerald-50 transition-all active:scale-95">Guardar
+                        class="w-full py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-600 shadow-lg shadow-emerald-50 transition-all active:scale-95 cursor-pointer">Guardar
                         Ajustes</button>
+                </div>
+
+                <!-- Sección: Directorio de Alumnado y Ficha de Salud -->
+                <div class="col-span-full pt-8 border-t border-slate-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>Censo Escolar y Conexión con Ficha de Salud</span>
+                            </h3>
+                            <p class="text-slate-400 text-xs mt-1 leading-relaxed">
+                                Importa el listado de alumnos para habilitar el autocompletado y mostrar alertas médicas instantáneas (alergias, patologías y teléfonos) al redactar un parte.
+                            </p>
+                        </div>
+                        <div class="px-3.5 py-1.5 bg-blue-50 text-blue-700 font-bold text-xs rounded-xl flex-shrink-0 border border-blue-100">
+                            <span id="census-count">0</span> alumnos en base local
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200/80 space-y-4">
+                        <div class="flex flex-wrap gap-3 items-center">
+                            <input type="file" id="census-file-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="App.handleCensusFileUpload(event)">
+                            <button type="button" onclick="document.getElementById('census-file-input').click()"
+                                class="group flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer">
+                                <svg class="w-4 h-4 text-blue-200 group-hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <span>Importar Alumnos (Excel / CSV)</span>
+                            </button>
+                            <button type="button" onclick="App.clearStudentsDirectory()"
+                                class="px-4 py-3 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer">
+                                Vaciar Censo
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-normal">
+                            💡 <b>Compatibilidad:</b> Puedes subir directamente el Excel exportado desde la app <i>Ficha de Salud</i>, o un archivo de Rayuela/Séneca con columnas de <i>Alumno/Nombre</i>, <i>Curso</i> y opcionalmente <i>Alergias</i>, <i>Patologías</i> y <i>Teléfono</i>.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

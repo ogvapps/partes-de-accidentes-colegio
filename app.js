@@ -101,17 +101,241 @@ let intervenerPads = [];
 let signaturePadCoordinator;
 let isAdminUnlocked = false;
 let reportViewSource = 'pending';
+let studentsDirectory = [];
+let offlineQueue = [];
+
+// --- Utilidades de Escape y Formato ---
+const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
+// --- Persistencia de Cola Offline y Censo Escolar ---
+const loadOfflineQueue = () => {
+    try {
+        const stored = localStorage.getItem('schoolOfflineQueue');
+        offlineQueue = stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.warn("No se pudo leer la cola offline:", e);
+        offlineQueue = [];
+    }
+};
+
+const saveOfflineQueue = () => {
+    try {
+        localStorage.setItem('schoolOfflineQueue', JSON.stringify(offlineQueue));
+    } catch (e) {
+        console.warn("No se pudo guardar la cola offline:", e);
+    }
+    updateNetworkStatusUI();
+};
+
+const loadStudentsDirectory = () => {
+    try {
+        const stored = localStorage.getItem('schoolStudentsDirectory');
+        studentsDirectory = stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.warn("No se pudo leer el censo escolar:", e);
+        studentsDirectory = [];
+    }
+};
+
+const saveStudentsDirectory = () => {
+    try {
+        localStorage.setItem('schoolStudentsDirectory', JSON.stringify(studentsDirectory));
+    } catch (e) {
+        console.warn("No se pudo guardar el censo escolar:", e);
+    }
+    updateCensusUI();
+};
+
+const updateCensusUI = () => {
+    const countEl = document.getElementById('census-count');
+    if (countEl) {
+        countEl.textContent = studentsDirectory.length;
+    }
+    const indicator = document.getElementById('census-status-indicator');
+    if (indicator) {
+        if (studentsDirectory.length > 0) {
+            indicator.textContent = `(${studentsDirectory.length} alumnos en censo)`;
+        } else {
+            indicator.textContent = '';
+        }
+    }
+};
+
+const updateNetworkStatusUI = () => {
+    const isOnline = navigator.onLine;
+    const offlineBadge = document.getElementById('offline-status-badge');
+    const queueCounter = document.getElementById('offline-queue-counter');
+    const syncBtn = document.getElementById('sync-offline-now-btn');
+    const syncBtnCount = document.getElementById('sync-btn-count');
+    const count = offlineQueue.length;
+
+    if (queueCounter) {
+        queueCounter.textContent = `${count} pendiente${count === 1 ? '' : 's'}`;
+        queueCounter.classList.toggle('hidden', count === 0);
+    }
+    if (syncBtnCount) {
+        syncBtnCount.textContent = count;
+    }
+
+    if (!isOnline) {
+        if (offlineBadge) offlineBadge.classList.remove('hidden');
+        if (syncBtn) syncBtn.classList.add('hidden');
+    } else {
+        if (count > 0) {
+            if (offlineBadge) offlineBadge.classList.add('hidden');
+            if (syncBtn) syncBtn.classList.remove('hidden');
+        } else {
+            if (offlineBadge) offlineBadge.classList.add('hidden');
+            if (syncBtn) syncBtn.classList.add('hidden');
+        }
+    }
+};
+
+const learnStudentToDirectory = (fullName, course) => {
+    if (!fullName || !fullName.trim()) return;
+    const cleanName = fullName.replace(/\s+/g, ' ').trim();
+    const existing = studentsDirectory.find(s => s.fullName.toLowerCase() === cleanName.toLowerCase());
+    if (!existing) {
+        studentsDirectory.push({
+            fullName: cleanName,
+            course: course ? course.trim() : '',
+            allergies: '',
+            medicalConditions: '',
+            emergencyContact: ''
+        });
+        saveStudentsDirectory();
+    } else if (course && !existing.course) {
+        existing.course = course.trim();
+        saveStudentsDirectory();
+    }
+};
+
+const populateDirectoryFromReports = (reports) => {
+    if (!reports || !reports.length) return;
+    let changed = false;
+    reports.forEach(r => {
+        if (!r.fullName || !r.fullName.trim()) return;
+        const cleanName = r.fullName.replace(/\s+/g, ' ').trim();
+        const existing = studentsDirectory.find(s => s.fullName.toLowerCase() === cleanName.toLowerCase());
+        if (!existing) {
+            studentsDirectory.push({
+                fullName: cleanName,
+                course: r.course ? r.course.trim() : '',
+                allergies: '',
+                medicalConditions: '',
+                emergencyContact: ''
+            });
+            changed = true;
+        } else if (r.course && !existing.course) {
+            existing.course = r.course.trim();
+            changed = true;
+        }
+    });
+    if (changed) {
+        saveStudentsDirectory();
+    }
+};
+
+const showHealthAlert = (student) => {
+    const healthAlertBox = document.getElementById('student-health-alert-box');
+    const detailsContainer = document.getElementById('student-health-alert-details');
+    if (!healthAlertBox || !detailsContainer) return;
+
+    const hasAllergies = student && student.allergies && student.allergies.trim();
+    const hasConditions = student && student.medicalConditions && student.medicalConditions.trim();
+    const hasContact = student && student.emergencyContact && student.emergencyContact.trim();
+
+    if (!hasAllergies && !hasConditions && !hasContact) {
+        healthAlertBox.classList.add('hidden');
+        return;
+    }
+
+    let html = '';
+    if (hasAllergies) {
+        html += `<div><b class="text-red-700">⚠️ Alergias / Intolerancias:</b> <span class="bg-red-100 text-red-900 px-2 py-0.5 rounded font-semibold ml-1">${escapeHtml(student.allergies)}</span></div>`;
+    }
+    if (hasConditions) {
+        html += `<div><b>🩺 Patologías / Tratamientos:</b> <span class="ml-1">${escapeHtml(student.medicalConditions)}</span></div>`;
+    }
+    if (hasContact) {
+        html += `<div><b>📞 Teléfonos Tutores / Urgencia:</b> <a href="tel:${escapeHtml(student.emergencyContact)}" class="underline font-bold text-blue-800 hover:text-blue-950 ml-1">${escapeHtml(student.emergencyContact)}</a></div>`;
+    }
+
+    detailsContainer.innerHTML = html;
+    healthAlertBox.classList.remove('hidden');
+};
+
+const hideHealthAlert = () => {
+    const healthAlertBox = document.getElementById('student-health-alert-box');
+    if (healthAlertBox) healthAlertBox.classList.add('hidden');
+};
+
+const setCourseSelectValue = (courseVal) => {
+    const courseInput = document.getElementById('accident-course');
+    if (!courseInput || !courseVal) return;
+    const clean = courseVal.trim().toLowerCase();
+
+    for (const opt of courseInput.options) {
+        if (opt.value.toLowerCase() === clean || opt.text.toLowerCase() === clean) {
+            courseInput.value = opt.value;
+            return;
+        }
+    }
+
+    const norm = (str) => str.toLowerCase().replace(/º|ª|\.|-|\s/g, '');
+    const cleanNorm = norm(clean);
+    for (const opt of courseInput.options) {
+        const optNorm = norm(opt.value);
+        if (optNorm && (optNorm.includes(cleanNorm) || cleanNorm.includes(optNorm))) {
+            courseInput.value = opt.value;
+            return;
+        }
+    }
+
+    if (courseVal.trim()) {
+        const newOpt = document.createElement('option');
+        newOpt.value = courseVal.trim();
+        newOpt.textContent = courseVal.trim();
+        courseInput.appendChild(newOpt);
+        courseInput.value = courseVal.trim();
+    }
+};
 
 // --- Inicialización ---
 const initApp = async () => {
     try {
+        loadOfflineQueue();
+        loadStudentsDirectory();
+        updateNetworkStatusUI();
+        updateCensusUI();
+
         // Cargar respaldo offline de partes si existe
         try {
             const cached = localStorage.getItem('cachedReports');
             if (cached) {
-                allLoadedReports = JSON.parse(cached);
+                const parsedCached = JSON.parse(cached);
+                const offlineReports = offlineQueue.map(item => ({
+                    ...item.data,
+                    id: item.localId,
+                    isOfflinePending: true
+                }));
+                const combined = [...offlineReports, ...parsedCached];
+                const uniqueMap = new Map();
+                combined.forEach(item => {
+                    if (!uniqueMap.has(item.id)) uniqueMap.set(item.id, item);
+                });
+                allLoadedReports = Array.from(uniqueMap.values());
                 currentPendingReports = allLoadedReports.filter(r => r.status === 'pending');
                 currentFinishedReports = allLoadedReports.filter(r => r.status !== 'pending');
+                populateDirectoryFromReports(allLoadedReports);
             }
         } catch (err) {
             console.warn("No se pudo leer la caché local:", err);
@@ -129,7 +353,13 @@ const initApp = async () => {
         updateSchoolYearSelectors();
         renderLists();
         App.updateStats();
-        console.log("Sistema inicializado correctamente.");
+
+        // Si tenemos conexión y hay partes pendientes en la cola, intentar sincronizar
+        if (navigator.onLine && offlineQueue.length > 0) {
+            setTimeout(() => App.syncOfflineQueue(), 1500);
+        }
+
+        console.log("Sistema inicializado correctamente con Modo Patio y Censo Escolar.");
     } catch (e) {
         console.error("Error inicializando la App:", e);
         showToast("Error crítico al conectar con el servidor.", true);
@@ -268,25 +498,49 @@ const updateSchoolYearSelectors = () => {
 
 const startFirestoreListener = () => {
     onSnapshot(query(reportsCollection), (snapshot) => {
-        const all = snapshot.docs.map(d => {
+        const firestoreReports = snapshot.docs.map(d => {
             const data = d.data();
             const sy = data.schoolYear || getSchoolYear(data.date || (data.createdAt ? new Date(data.createdAt.toMillis()).toISOString().split('T')[0] : null));
             return { id: d.id, ...data, schoolYear: sy };
         });
 
-        allLoadedReports = all;
-        // Respaldo local de partes para disponibilidad continua
+        // Respaldo local de partes de Firestore
         try {
-            localStorage.setItem('cachedReports', JSON.stringify(all));
+            localStorage.setItem('cachedReports', JSON.stringify(firestoreReports));
         } catch (e) {
             console.warn("No se pudo guardar respaldo en localStorage:", e);
         }
 
-        currentPendingReports = all.filter(r => r.status === 'pending')
-            .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        // Combinar con la cola offline local
+        const offlineReports = offlineQueue.map(item => ({
+            ...item.data,
+            id: item.localId,
+            isOfflinePending: true
+        }));
 
-        currentFinishedReports = all.filter(r => r.status !== 'pending')
-            .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        const combined = [...offlineReports, ...firestoreReports];
+        const uniqueMap = new Map();
+        combined.forEach(item => {
+            if (!uniqueMap.has(item.id)) uniqueMap.set(item.id, item);
+        });
+        allLoadedReports = Array.from(uniqueMap.values());
+
+        // Aprender automáticamente alumnos de partes históricos si faltan
+        populateDirectoryFromReports(allLoadedReports);
+
+        currentPendingReports = allLoadedReports.filter(r => r.status === 'pending')
+            .sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.date || 0).getTime());
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.date || 0).getTime());
+                return timeB - timeA;
+            });
+
+        currentFinishedReports = allLoadedReports.filter(r => r.status !== 'pending')
+            .sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.date || 0).getTime());
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.date || 0).getTime());
+                return timeB - timeA;
+            });
 
         updateSchoolYearSelectors();
         renderLists();
@@ -315,16 +569,19 @@ const renderLists = () => {
     const pendingContainer = document.getElementById('pending-list');
     pendingContainer.innerHTML = currentPendingReports.length ? '' : `<div class="text-center py-12 text-slate-400">No hay partes pendientes de firma.</div>`;
     currentPendingReports.forEach(report => {
-        const date = report.createdAt ? new Date(report.createdAt.toMillis()).toLocaleDateString() : (report.date || '---');
+        const date = report.createdAt ? (report.createdAt.toMillis ? new Date(report.createdAt.toMillis()).toLocaleDateString() : new Date(report.createdAt).toLocaleDateString()) : (report.date || '---');
+        const isOffline = report.isOfflinePending || (report.id && String(report.id).startsWith('offline_'));
+        const offlineBadge = isOffline ? `<span class="badge-offline-sync px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-md border border-amber-300">📶 Modo Patio</span>` : '';
         const card = document.createElement('div');
         card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
         card.innerHTML = `
             <div class="flex-grow">
-                <div class="flex items-center gap-2">
-                    <h3 class="font-bold text-slate-800">${report.fullName}</h3>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-bold text-slate-800">${escapeHtml(report.fullName)}</h3>
                     <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 rounded-md">Pendiente</span>
+                    ${offlineBadge}
                 </div>
-                <p class="text-sm text-slate-500">${report.course} • ${report.location} • ${date}</p>
+                <p class="text-sm text-slate-500">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date}</p>
             </div>
             <div class="flex gap-2 shrink-0">
                 <button onclick="App.reviewReport('${report.id}')" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors">Firmar</button>
@@ -364,18 +621,21 @@ const renderLists = () => {
 
     finishedContainer.innerHTML = filteredFinished.length ? '' : `<div class="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-100">No hay partes archivados para el curso seleccionado o la búsqueda indicada.</div>`;
     filteredFinished.forEach(report => {
-        const date = report.date ? new Date(report.date).toLocaleDateString() : (report.createdAt ? new Date(report.createdAt.toMillis()).toLocaleDateString() : '---');
+        const date = report.date ? new Date(report.date).toLocaleDateString() : (report.createdAt ? (report.createdAt.toMillis ? new Date(report.createdAt.toMillis()).toLocaleDateString() : new Date(report.createdAt).toLocaleDateString()) : '---');
         const reportYear = report.schoolYear || getSchoolYear(report.date);
+        const isOffline = report.isOfflinePending || (report.id && String(report.id).startsWith('offline_'));
+        const offlineBadge = isOffline ? `<span class="badge-offline-sync px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-md border border-amber-300">📶 Modo Patio</span>` : '';
         const card = document.createElement('div');
         card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
         card.innerHTML = `
             <div class="flex-grow">
                 <div class="flex items-center gap-2 flex-wrap">
-                    <h3 class="font-bold text-slate-800">${report.fullName}</h3>
+                    <h3 class="font-bold text-slate-800">${escapeHtml(report.fullName)}</h3>
                     <span class="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-md">Curso ${reportYear}</span>
                     <span class="px-2 py-0.5 text-[10px] font-bold ${report.severity === 'Grave' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'} rounded-md">${report.severity}</span>
+                    ${offlineBadge}
                 </div>
-                <p class="text-sm text-slate-500 mt-1">${report.course} • ${report.location} • ${date} ${report.time ? `(${report.time})` : ''}</p>
+                <p class="text-sm text-slate-500 mt-1">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date} ${report.time ? `(${report.time})` : ''}</p>
             </div>
             <div class="flex gap-2 shrink-0">
                 <button onclick="App.viewReport('${report.id}')" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg font-semibold hover:bg-slate-600 hover:text-white transition-colors">Ver</button>
@@ -712,10 +972,169 @@ window.App = {
         const modal = document.getElementById('confirm-delete-modal-overlay');
         modal.classList.remove('hidden');
         document.getElementById('confirm-delete-confirm-btn').onclick = async () => {
-            await deleteDoc(doc(db, "finishedReports", id));
-            modal.classList.add('hidden');
-            showToast("Parte eliminado.");
+            if (String(id).startsWith('offline_')) {
+                offlineQueue = offlineQueue.filter(q => q.localId !== id && q.reportId !== id);
+                saveOfflineQueue();
+                currentPendingReports = currentPendingReports.filter(r => r.id !== id);
+                currentFinishedReports = currentFinishedReports.filter(r => r.id !== id);
+                renderLists();
+                updateCounters();
+                App.updateStats();
+                modal.classList.add('hidden');
+                showToast("Parte pendiente eliminado de la cola local.");
+                return;
+            }
+            try {
+                await deleteDoc(doc(db, "finishedReports", id));
+                modal.classList.add('hidden');
+                showToast("Parte eliminado.");
+            } catch (err) {
+                console.error("Error al eliminar documento:", err);
+                modal.classList.add('hidden');
+                showToast("Error al eliminar el parte.", true);
+            }
         };
+    },
+    syncOfflineQueue: async () => {
+        if (!navigator.onLine) {
+            showToast("No hay conexión a internet actualmente. El modo patio sigue activo.", true);
+            updateNetworkStatusUI();
+            return;
+        }
+        if (!offlineQueue.length) {
+            showToast("No hay partes pendientes de sincronizar.");
+            updateNetworkStatusUI();
+            return;
+        }
+
+        const itemsToSync = [...offlineQueue];
+        let syncedCount = 0;
+        showToast("Sincronizando partes con el servidor...");
+
+        for (const item of itemsToSync) {
+            try {
+                const { mode, reportId, data, localId } = item;
+                const uploadData = { ...data };
+                delete uploadData.isOfflinePending;
+                delete uploadData.id;
+
+                if (uploadData.createdAt && typeof uploadData.createdAt === 'number') {
+                    uploadData.createdAt = serverTimestamp();
+                }
+                uploadData.updatedAt = serverTimestamp();
+
+                if (mode === 'finalize') {
+                    uploadData.status = 'finished';
+                    uploadData.finalizedAt = serverTimestamp();
+                    await updateDoc(doc(db, "finishedReports", reportId), uploadData);
+                } else if (mode === 'edit') {
+                    await updateDoc(doc(db, "finishedReports", reportId), uploadData);
+                } else {
+                    uploadData.status = 'pending';
+                    await addDoc(reportsCollection, uploadData);
+                }
+
+                offlineQueue = offlineQueue.filter(q => q.localId !== localId);
+                saveOfflineQueue();
+                syncedCount++;
+            } catch (syncErr) {
+                console.error("Error sincronizando parte offline:", syncErr);
+                break;
+            }
+        }
+
+        if (syncedCount > 0) {
+            showToast(`✅ ¡${syncedCount} parte${syncedCount > 1 ? 's' : ''} subido${syncedCount > 1 ? 's' : ''} al servidor!`);
+            currentPendingReports = currentPendingReports.filter(r => !String(r.id).startsWith('offline_'));
+            currentFinishedReports = currentFinishedReports.filter(r => !String(r.id).startsWith('offline_'));
+            renderLists();
+            updateCounters();
+            App.updateStats();
+        }
+        updateNetworkStatusUI();
+    },
+    handleCensusFileUpload: async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+
+        try {
+            if (typeof XLSX === 'undefined') {
+                throw new Error("Librería SheetJS no disponible.");
+            }
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+            if (!jsonData || !jsonData.length) {
+                showToast("El archivo está vacío o no contiene filas con datos.", true);
+                return;
+            }
+
+            let processedCount = 0;
+            jsonData.forEach(row => {
+                const getVal = (patterns) => {
+                    for (const key of Object.keys(row)) {
+                        for (const pat of patterns) {
+                            if (key.toLowerCase().includes(pat.toLowerCase())) {
+                                const val = String(row[key]).trim();
+                                if (val) return val;
+                            }
+                        }
+                    }
+                    return '';
+                };
+
+                const fullName = getVal(['nombre', 'alumno', 'estudiante', 'apellidos y nombre', 'apellidos']);
+                if (!fullName) return;
+
+                const course = getVal(['curso', 'grupo', 'nivel', 'clase', 'unidad']);
+                const allergies = getVal(['alergia', 'alergias', 'intolerancia', 'intolerancias']);
+                const medicalConditions = getVal(['patologia', 'patologías', 'enfermedad', 'medica', 'médica', 'salud', 'observaciones']);
+                const emergencyContact = getVal(['teléfono', 'telefono', 'contacto', 'urgencia', 'emergencia', 'movil', 'móvil', 'padre', 'madre', 'tutor']);
+
+                const cleanName = fullName.replace(/\s+/g, ' ').trim();
+                const existingIdx = studentsDirectory.findIndex(s => s.fullName.toLowerCase() === cleanName.toLowerCase());
+
+                const studentObj = {
+                    fullName: cleanName,
+                    course: course || (existingIdx >= 0 ? studentsDirectory[existingIdx].course : ''),
+                    allergies: allergies || (existingIdx >= 0 ? studentsDirectory[existingIdx].allergies : ''),
+                    medicalConditions: medicalConditions || (existingIdx >= 0 ? studentsDirectory[existingIdx].medicalConditions : ''),
+                    emergencyContact: emergencyContact || (existingIdx >= 0 ? studentsDirectory[existingIdx].emergencyContact : '')
+                };
+
+                if (existingIdx >= 0) {
+                    studentsDirectory[existingIdx] = { ...studentsDirectory[existingIdx], ...studentObj };
+                } else {
+                    studentsDirectory.push(studentObj);
+                }
+                processedCount++;
+            });
+
+            saveStudentsDirectory();
+            updateCensusUI();
+            showToast(`✅ Se han importado/actualizado ${processedCount} alumnos en el censo.`);
+        } catch (err) {
+            console.error("Error importando censo:", err);
+            showToast("Error al leer el archivo. Comprueba el formato Excel o CSV.", true);
+        } finally {
+            event.target.value = '';
+        }
+    },
+    clearStudentsDirectory: () => {
+        if (!studentsDirectory.length) {
+            showToast("El censo ya está vacío.");
+            return;
+        }
+        if (confirm(`¿Seguro que deseas eliminar los ${studentsDirectory.length} alumnos del censo local?`)) {
+            studentsDirectory = [];
+            saveStudentsDirectory();
+            updateCensusUI();
+            hideHealthAlert();
+            showToast("Censo de alumnos vaciado correctamente.");
+        }
     },
     exportToExcel: (singleReport = null) => {
         let data;
@@ -1492,6 +1911,14 @@ const fillForm = (report) => {
     document.getElementById('interveners-container').innerHTML = '';
     intervenerPads = [];
 
+    // Limpiar alertas de salud previas y sugerencias
+    hideHealthAlert();
+    const suggestionsContainer = document.getElementById('student-suggestions-container');
+    if (suggestionsContainer) {
+        suggestionsContainer.classList.add('hidden');
+        suggestionsContainer.innerHTML = '';
+    }
+
     Object.keys(report).forEach(key => {
         const input = form.elements[key];
         if (input) {
@@ -1509,6 +1936,18 @@ const fillForm = (report) => {
     const yearInput = document.getElementById('accident-school-year');
     if (yearInput) {
         yearInput.value = report.schoolYear || getSchoolYear(dateVal);
+    }
+
+    if (report.course) {
+        setCourseSelectValue(report.course);
+    }
+
+    if (report.fullName) {
+        const clean = report.fullName.trim().toLowerCase();
+        const found = studentsDirectory.find(s => s.fullName.toLowerCase() === clean);
+        if (found) {
+            showHealthAlert(found);
+        }
     }
 
     if (report.interveners) report.interveners.forEach((int, i) => addIntervenerBlock(int.name, int.signature, i > 0));
@@ -1640,6 +2079,86 @@ const setupEventListeners = () => {
         if (e.key === 'Enter') document.getElementById('admin-pin-submit-btn').click();
     };
 
+    // Eventos de Conexión de Red (Modo Patio)
+    window.addEventListener('online', () => {
+        showToast("📶 Conexión restablecida. Sincronizando con el servidor...");
+        updateNetworkStatusUI();
+        App.syncOfflineQueue();
+    });
+
+    window.addEventListener('offline', () => {
+        showToast("📶 Sin conexión. Has entrado en Modo Patio (los partes se guardarán en tu dispositivo).", true);
+        updateNetworkStatusUI();
+    });
+
+    // Autocompletado de Alumnos y Ficha de Salud
+    const nameInput = document.getElementById('accident-fullName');
+    const suggestionsContainer = document.getElementById('student-suggestions-container');
+    const courseInput = document.getElementById('accident-course');
+
+    if (nameInput && suggestionsContainer) {
+        nameInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+            if (!query || query.length < 2) {
+                suggestionsContainer.classList.add('hidden');
+                suggestionsContainer.innerHTML = '';
+                return;
+            }
+
+            const matches = studentsDirectory.filter(s =>
+                s.fullName.toLowerCase().includes(query) ||
+                (s.course && s.course.toLowerCase().includes(query))
+            ).slice(0, 8);
+
+            if (matches.length === 0) {
+                suggestionsContainer.classList.add('hidden');
+                suggestionsContainer.innerHTML = '';
+                return;
+            }
+
+            suggestionsContainer.innerHTML = matches.map((st, idx) => {
+                const courseBadge = st.course ? `<span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-semibold">${escapeHtml(st.course)}</span>` : '';
+                const alertBadge = (st.allergies || st.medicalConditions) ? `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[11px] font-bold">⚠️ Alerta médica</span>` : '';
+                return `
+                    <div class="typeahead-item p-3 border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-blue-50 transition-colors flex justify-between items-center" data-index="${idx}">
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">${escapeHtml(st.fullName)}</div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                ${courseBadge}
+                                ${alertBadge}
+                            </div>
+                        </div>
+                        <span class="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-md font-medium">Elegir</span>
+                    </div>
+                `;
+            }).join('');
+
+            suggestionsContainer.querySelectorAll('.typeahead-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const idx = parseInt(item.dataset.index, 10);
+                    const selected = matches[idx];
+                    if (selected) {
+                        nameInput.value = selected.fullName;
+                        if (selected.course) {
+                            setCourseSelectValue(selected.course);
+                        }
+                        showHealthAlert(selected);
+                    }
+                    suggestionsContainer.classList.add('hidden');
+                    suggestionsContainer.innerHTML = '';
+                });
+            });
+
+            suggestionsContainer.classList.remove('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!nameInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.classList.add('hidden');
+            }
+        });
+    }
+
     // Google Auth
     document.getElementById('google-auth-submit-btn').onclick = () => {
         handleGoogleAuth();
@@ -1680,7 +2199,13 @@ const setupEventListeners = () => {
             updatedAt: serverTimestamp()
         };
 
+        const isOffline = !navigator.onLine;
+
         try {
+            if (isOffline) {
+                throw new Error("offline_mode");
+            }
+
             if (mode === 'finalize') {
                 finalData.status = 'finished';
                 finalData.finalizedAt = serverTimestamp();
@@ -1696,11 +2221,48 @@ const setupEventListeners = () => {
                 await addDoc(reportsCollection, finalData);
                 showToast("Parte creado como pendiente para el curso " + schoolYear + ".");
             }
-            switchView('pending-container');
         } catch (err) {
-            console.error(err);
-            showToast("Error al guardar el parte.", true);
+            console.warn("Guardando localmente en Modo Patio:", err);
+            const localId = mode === 'new' ? 'offline_' + Date.now() : reportId;
+            const offlineReportData = {
+                ...finalData,
+                id: localId,
+                createdAt: Date.now(),
+                isOfflinePending: true
+            };
+
+            offlineQueue.push({
+                localId,
+                mode,
+                reportId: localId,
+                data: offlineReportData,
+                timestamp: Date.now()
+            });
+            saveOfflineQueue();
+
+            if (mode === 'finalize') {
+                offlineReportData.status = 'finished';
+                currentPendingReports = currentPendingReports.filter(r => r.id !== reportId);
+                currentFinishedReports.unshift(offlineReportData);
+            } else if (mode === 'edit') {
+                const targetList = document.getElementById('editingReportId').dataset.status === 'pending' ? currentPendingReports : currentFinishedReports;
+                const idx = targetList.findIndex(r => r.id === reportId);
+                if (idx >= 0) targetList[idx] = offlineReportData;
+            } else {
+                offlineReportData.status = 'pending';
+                currentPendingReports.unshift(offlineReportData);
+            }
+
+            renderLists();
+            updateCounters();
+            App.updateStats();
+
+            showToast("📶 Guardado en Modo Patio. Se sincronizará automáticamente cuando vuelva la red.");
         }
+
+        // Aprender automáticamente alumno para el censo escolar
+        learnStudentToDirectory(finalData.fullName, finalData.course);
+        switchView('pending-container');
     };
 };
 

@@ -309,3 +309,61 @@ body {
     background: #d1fae5;
     color: #065f46;
 }
+
+.badge-offline-sync {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px dashed #fb923c;
+    animation: pulseSync 2s infinite;
+}
+
+@keyframes pulseSync {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Autocomplete Typeahead Dropdown */
+.typeahead-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    z-index: 60;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 0.25rem;
+}
+
+.typeahead-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.typeahead-item:last-child {
+    border-bottom: none;
+}
+
+.typeahead-item:hover, .typeahead-item.active {
+    background-color: #eff6ff;
+}
+
+/* Health Alert Box in Form */
+.health-alert-box {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid #fcd34d;
+    border-left: 4px solid #f59e0b;
+    border-radius: 1rem;
+    padding: 1rem 1.25rem;
+    margin-top: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.3s ease-out forwards;
+}
