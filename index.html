@@ -4,10 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salud Escolar - Premium Management</title>
+    <title>Partes de Accidentes - Salud Escolar</title>
 
+    <!-- App Manifest & PWA Meta -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Partes Accidentes">
+    <meta name="application-name" content="Partes Accidentes">
+
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <!-- External Libs -->
@@ -67,21 +80,27 @@
     <!-- Entry Screen (PIN) -->
     <div id="entry-pin-modal-overlay" class="fixed inset-0 glass-panel flex items-center justify-center z-[100]">
         <div
-            class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center transform transition-all border border-slate-100">
-            <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <svg class="w-8 h-8">
-                    <use xlink:href="#icon-clock"></use>
-                </svg>
+            class="bg-white p-8 sm:p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center transform transition-all border border-slate-100 mx-4">
+            <div class="relative w-20 h-20 mx-auto mb-5">
+                <img src="icon-192.png" alt="Salud Escolar" class="w-20 h-20 rounded-2xl shadow-md border border-slate-100 object-contain p-1.5 bg-white mx-auto">
             </div>
-            <h2 class="text-2xl font-bold text-slate-800 mb-2 school-name-text">Colegio Madre Matilde</h2>
-            <p class="text-slate-500 mb-8 text-sm">Paso 1: Validar PIN de Centro</p>
+            <h2 class="text-2xl font-bold text-slate-800 mb-1 school-name-text">Colegio Madre Matilde</h2>
+            <p class="text-slate-400 font-semibold text-xs tracking-wider uppercase mb-6">Partes de Accidentes</p>
             <div class="space-y-4">
                 <input type="password" id="entry-pin-input"
                     class="w-full p-4 text-center text-2xl tracking-[12px] border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none transition-all"
                     placeholder="····" maxlength="4">
                 <button id="entry-pin-submit-btn"
-                    class="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95">Validar
-                    PIN</button>
+                    class="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 cursor-pointer">Validar PIN</button>
+                <button type="button" onclick="App.triggerInstallPrompt()"
+                    class="w-full py-2.5 px-4 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer">
+                    <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Instalar App en este dispositivo</span>
+                </button>
             </div>
         </div>
     </div>
@@ -123,12 +142,26 @@
 
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 no-print gap-4">
-            <div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight school-name-text text-center md:text-left">
-                    Colegio Madre Matilde</h1>
-                <p class="text-slate-500 font-medium text-center md:text-left">Gestión de Accidentes y Salud</p>
+            <div class="flex items-center gap-3.5">
+                <img src="icon-192.png" alt="Logo Salud Escolar" class="w-12 h-12 rounded-2xl shadow-sm border border-slate-100 object-contain p-1 bg-white flex-shrink-0">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight school-name-text text-center md:text-left">
+                        Colegio Madre Matilde</h1>
+                    <p class="text-slate-500 font-medium text-xs md:text-sm text-center md:text-left">Gestión de Accidentes y Salud</p>
+                </div>
             </div>
-            <nav id="main-nav" class="flex p-1 bg-slate-200/50 rounded-2xl gap-1">
+            <div class="flex flex-wrap items-center justify-center gap-2.5">
+                <button id="pwa-header-install-btn" onclick="App.triggerInstallPrompt()"
+                    class="group flex items-center gap-2 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-blue-700 hover:text-white rounded-xl font-bold text-xs shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
+                    title="Descargar e instalar la app en tu escritorio o pantalla de inicio">
+                    <svg class="w-4 h-4 text-blue-600 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Descargar App</span>
+                </button>
+                <nav id="main-nav" class="flex p-1 bg-slate-200/50 rounded-2xl gap-1">
                 <button data-target="form-container"
                     class="nav-button flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold"
                     data-active="true">
@@ -708,6 +741,99 @@
                     class="flex-1 py-3 text-slate-400 font-bold">Cancelar</button>
                 <button id="confirm-delete-confirm-btn"
                     class="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl active:scale-95 transition-all">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Install Modal -->
+    <div id="pwa-install-modal-overlay" class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[120]">
+        <div class="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-100 relative animate-fadeIn mx-4">
+            <button onclick="document.getElementById('pwa-install-modal-overlay').classList.add('hidden')"
+                class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-all cursor-pointer"
+                title="Cerrar">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <div class="flex items-center gap-4 mb-6">
+                <img src="icon-192.png" alt="Icono de la App" class="w-16 h-16 rounded-2xl shadow-md border border-slate-100 object-contain p-1 bg-white flex-shrink-0">
+                <div>
+                    <h3 class="text-xl font-black text-slate-900">Descargar Aplicación</h3>
+                    <p class="text-xs text-slate-500 font-medium school-name-text">Partes de Accidentes</p>
+                </div>
+            </div>
+
+            <!-- Instalación Nativa Directa (Chrome, Edge, Android cuando está disponible) -->
+            <div id="pwa-install-native-box" class="hidden mb-6">
+                <p class="text-sm text-slate-600 mb-5 leading-relaxed">
+                    Instala la aplicación en tu ordenador o móvil para acceder directamente con un solo clic, sin barras del navegador y con funcionamiento óptimo.
+                </p>
+                <button id="pwa-native-install-action-btn"
+                    class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Instalar Ahora</span>
+                </button>
+            </div>
+
+            <!-- Instrucciones Manuales por Plataforma -->
+            <div id="pwa-install-manual-box" class="space-y-4 text-sm text-slate-600">
+                <div id="pwa-ios-instructions" class="hidden space-y-3 bg-blue-50/70 p-4 rounded-2xl border border-blue-100">
+                    <div class="font-bold text-blue-900 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                        </svg>
+                        Instalación en iPhone / iPad (Safari):
+                    </div>
+                    <ol class="list-decimal list-inside space-y-2 text-xs text-slate-700 font-medium">
+                        <li>Pulsa el botón <b>Compartir</b> (<span class="font-mono text-blue-700 font-bold">⎋</span> cuadrado con flecha arriba) en Safari.</li>
+                        <li>Baja y selecciona <b>«Añadir a la pantalla de inicio»</b> (➕).</li>
+                        <li>Pulsa <b>«Añadir»</b> arriba a la derecha.</li>
+                    </ol>
+                </div>
+
+                <div id="pwa-desktop-instructions" class="hidden space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div class="font-bold text-slate-800 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        Instalación en Ordenador (Chrome / Edge):
+                    </div>
+                    <ol class="list-decimal list-inside space-y-2 text-xs text-slate-600 font-medium">
+                        <li>Fíjate en el extremo derecho de la barra de direcciones de tu navegador.</li>
+                        <li>Haz clic en el icono de <b>Instalar aplicación</b> (🖥️ o ⊕).</li>
+                        <li>O pulsa en el menú (⋮) &gt; <b>«Instalar Partes de Accidentes»</b>.</li>
+                    </ol>
+                </div>
+
+                <div id="pwa-android-instructions" class="hidden space-y-3 bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100">
+                    <div class="font-bold text-emerald-900 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                        </svg>
+                        Instalación en Android (Chrome):
+                    </div>
+                    <ol class="list-decimal list-inside space-y-2 text-xs text-slate-700 font-medium">
+                        <li>Toca los tres puntos (⋮) en la esquina superior de Chrome.</li>
+                        <li>Selecciona <b>«Instalar aplicación»</b> o <b>«Añadir a la pantalla principal»</b>.</li>
+                    </ol>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="document.getElementById('pwa-install-modal-overlay').classList.add('hidden')"
+                        class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl transition-all active:scale-95 cursor-pointer">
+                        Entendido
+                    </button>
+                </div>
             </div>
         </div>
     </div>

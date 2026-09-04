@@ -1,10 +1,14 @@
-const CACHE_NAME = 'accidentes-v3';
+const CACHE_NAME = 'accidentes-v4';
 const ASSETS = [
     './',
     './index.html',
     './styles.css',
     './app.js',
     './manifest.json',
+    './favicon.ico',
+    './favicon-32x32.png',
+    './favicon-16x16.png',
+    './apple-touch-icon.png',
     './icon-192.png',
     './icon-512.png',
     'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js',

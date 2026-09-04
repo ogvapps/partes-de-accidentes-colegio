@@ -4,13 +4,47 @@ import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, query, se
 import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // --- PWA & Service Worker ---
+let deferredPrompt = null;
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('SW registered'))
+            .then(reg => {
+                console.log('SW registered');
+                reg.update();
+            })
             .catch(err => console.log('SW failed', err));
     });
 }
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    console.log('PWA: Evento beforeinstallprompt capturado con éxito');
+    updateInstallButtons();
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    console.log('PWA: Aplicación instalada con éxito');
+    showToast("¡Aplicación instalada con éxito!");
+    updateInstallButtons();
+});
+
+const updateInstallButtons = () => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const headerBtn = document.getElementById('pwa-header-install-btn');
+    if (headerBtn && isStandalone) {
+        headerBtn.innerHTML = `
+            <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span class="text-emerald-700">App Instalada</span>
+        `;
+        headerBtn.className = "group flex items-center gap-2 px-3.5 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-bold text-xs shadow-sm transition-all";
+        headerBtn.title = "La aplicación ya está instalada en tu dispositivo";
+    }
+};
 
 // --- Configuración ---
 const FIREBASE_CONFIG = {
@@ -91,6 +125,7 @@ const initApp = async () => {
 
         setupEventListeners();
         loadLocalSettings();
+        updateInstallButtons();
         updateSchoolYearSelectors();
         renderLists();
         App.updateStats();
@@ -417,6 +452,66 @@ window.App = {
     init: initApp,
     handleAuth,
     switchView,
+    triggerInstallPrompt: async () => {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) {
+            showToast("La aplicación ya está instalada y funcionando en modo directo.");
+            return;
+        }
+
+        const modal = document.getElementById('pwa-install-modal-overlay');
+        const nativeBox = document.getElementById('pwa-install-native-box');
+        const iosBox = document.getElementById('pwa-ios-instructions');
+        const desktopBox = document.getElementById('pwa-desktop-instructions');
+        const androidBox = document.getElementById('pwa-android-instructions');
+
+        if (deferredPrompt) {
+            if (nativeBox) nativeBox.classList.remove('hidden');
+            if (iosBox) iosBox.classList.add('hidden');
+            if (desktopBox) desktopBox.classList.add('hidden');
+            if (androidBox) androidBox.classList.add('hidden');
+            if (modal) modal.classList.remove('hidden');
+
+            const nativeBtn = document.getElementById('pwa-native-install-action-btn');
+            if (nativeBtn) {
+                nativeBtn.onclick = async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            showToast("¡Instalación de la app iniciada!");
+                        }
+                        deferredPrompt = null;
+                        if (modal) modal.classList.add('hidden');
+                        updateInstallButtons();
+                    }
+                };
+            }
+            return;
+        }
+
+        // Si no hay prompt nativo activo (ej. iOS Safari o navegador de escritorio)
+        if (nativeBox) nativeBox.classList.add('hidden');
+        const ua = navigator.userAgent || '';
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isAndroid = /Android/.test(ua);
+
+        if (isIOS) {
+            if (iosBox) iosBox.classList.remove('hidden');
+            if (desktopBox) desktopBox.classList.add('hidden');
+            if (androidBox) androidBox.classList.add('hidden');
+        } else if (isAndroid) {
+            if (androidBox) androidBox.classList.remove('hidden');
+            if (iosBox) iosBox.classList.add('hidden');
+            if (desktopBox) desktopBox.classList.add('hidden');
+        } else {
+            if (desktopBox) desktopBox.classList.remove('hidden');
+            if (iosBox) iosBox.classList.add('hidden');
+            if (androidBox) androidBox.classList.add('hidden');
+        }
+
+        if (modal) modal.classList.remove('hidden');
+    },
     addIntervener: () => addIntervenerBlock('', null, true),
     clearSignature: (btn) => {
         const canvas = btn.parentElement.querySelector('canvas');
