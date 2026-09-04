@@ -31,11 +31,38 @@ const APP_CONFIG = {
     COORDINATOR_NAME: 'Orestes González Villanueva'
 };
 
+// --- Utilidad de Cálculo de Curso Escolar (Septiembre a Agosto) ---
+const getSchoolYear = (dateStr) => {
+    let d;
+    if (dateStr) {
+        const parts = String(dateStr).split('T')[0].split('-');
+        if (parts.length === 3) {
+            d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        } else {
+            d = new Date(dateStr);
+        }
+    } else {
+        d = new Date();
+    }
+    if (isNaN(d.getTime())) d = new Date();
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1; // 1-12
+    // Calendario escolar en España:
+    // Mes 9 a 12 (septiembre a diciembre) -> YYYY-(YYYY+1)
+    // Mes 1 a 8 (enero a agosto) -> (YYYY-1)-YYYY
+    return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+};
+
 // --- Estado Global ---
 let db, auth;
 let reportsCollection;
+let allLoadedReports = [];
 let currentPendingReports = [];
 let currentFinishedReports = [];
+let currentSchoolYearFilter = 'all';
+let currentStatsYearFilter = 'all';
+let currentMemoryYearFilter = '';
+let currentFinishedSearchQuery = '';
 let intervenerPads = [];
 let signaturePadCoordinator;
 let isAdminUnlocked = false;
@@ -44,6 +71,18 @@ let reportViewSource = 'pending';
 // --- Inicialización ---
 const initApp = async () => {
     try {
+        // Cargar respaldo offline de partes si existe
+        try {
+            const cached = localStorage.getItem('cachedReports');
+            if (cached) {
+                allLoadedReports = JSON.parse(cached);
+                currentPendingReports = allLoadedReports.filter(r => r.status === 'pending');
+                currentFinishedReports = allLoadedReports.filter(r => r.status !== 'pending');
+            }
+        } catch (err) {
+            console.warn("No se pudo leer la caché local:", err);
+        }
+
         const app = initializeApp(FIREBASE_CONFIG);
         getAnalytics(app);
         db = getFirestore(app);
@@ -52,6 +91,9 @@ const initApp = async () => {
 
         setupEventListeners();
         loadLocalSettings();
+        updateSchoolYearSelectors();
+        renderLists();
+        App.updateStats();
         console.log("Sistema inicializado correctamente.");
     } catch (e) {
         console.error("Error inicializando la App:", e);
@@ -129,9 +171,81 @@ const handleGoogleAuth = async () => {
     }
 };
 
+const getAvailableSchoolYears = () => {
+    const years = new Set();
+    const currentYear = localStorage.getItem('schoolYear') || APP_CONFIG.DEFAULT_YEAR || getSchoolYear();
+    years.add(currentYear);
+    years.add(getSchoolYear());
+
+    allLoadedReports.forEach(r => {
+        if (r.schoolYear) years.add(r.schoolYear);
+        else if (r.date) years.add(getSchoolYear(r.date));
+    });
+
+    return Array.from(years).sort().reverse();
+};
+
+const updateSchoolYearSelectors = () => {
+    const years = getAvailableSchoolYears();
+    const currentYear = localStorage.getItem('schoolYear') || APP_CONFIG.DEFAULT_YEAR || getSchoolYear();
+
+    // 1. Selector en Archivo Histórico
+    const finishedSelect = document.getElementById('filter-finished-year');
+    if (finishedSelect) {
+        const prevVal = finishedSelect.value || currentSchoolYearFilter;
+        finishedSelect.innerHTML = `<option value="all">Todos los cursos (${allLoadedReports.filter(r => r.status !== 'pending').length})</option>` +
+            years.map(y => {
+                const count = allLoadedReports.filter(r => r.status !== 'pending' && (r.schoolYear === y || (!r.schoolYear && getSchoolYear(r.date) === y))).length;
+                return `<option value="${y}">Curso ${y} (${count})</option>`;
+            }).join('');
+        if (prevVal && (prevVal === 'all' || years.includes(prevVal))) {
+            finishedSelect.value = prevVal;
+            currentSchoolYearFilter = prevVal;
+        }
+    }
+
+    // 2. Selector en Estadísticas
+    const statsSelect = document.getElementById('filter-stats-year');
+    if (statsSelect) {
+        const prevVal = statsSelect.value || currentStatsYearFilter;
+        statsSelect.innerHTML = `<option value="all">Todos los cursos</option>` +
+            years.map(y => `<option value="${y}">Curso ${y}</option>`).join('');
+        if (prevVal && (prevVal === 'all' || years.includes(prevVal))) {
+            statsSelect.value = prevVal;
+            currentStatsYearFilter = prevVal;
+        }
+    }
+
+    // 3. Selector en Memoria Anual
+    const memorySelect = document.getElementById('filter-memory-year');
+    if (memorySelect) {
+        const prevVal = memorySelect.value || currentMemoryYearFilter || currentYear;
+        memorySelect.innerHTML = years.map(y => `<option value="${y}">Curso ${y}</option>`).join('');
+        if (prevVal && years.includes(prevVal)) {
+            memorySelect.value = prevVal;
+            currentMemoryYearFilter = prevVal;
+        } else if (years.length) {
+            memorySelect.value = years[0];
+            currentMemoryYearFilter = years[0];
+        }
+    }
+};
+
 const startFirestoreListener = () => {
     onSnapshot(query(reportsCollection), (snapshot) => {
-        const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const all = snapshot.docs.map(d => {
+            const data = d.data();
+            const sy = data.schoolYear || getSchoolYear(data.date || (data.createdAt ? new Date(data.createdAt.toMillis()).toISOString().split('T')[0] : null));
+            return { id: d.id, ...data, schoolYear: sy };
+        });
+
+        allLoadedReports = all;
+        // Respaldo local de partes para disponibilidad continua
+        try {
+            localStorage.setItem('cachedReports', JSON.stringify(all));
+        } catch (e) {
+            console.warn("No se pudo guardar respaldo en localStorage:", e);
+        }
 
         currentPendingReports = all.filter(r => r.status === 'pending')
             .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
@@ -139,6 +253,7 @@ const startFirestoreListener = () => {
         currentFinishedReports = all.filter(r => r.status !== 'pending')
             .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
+        updateSchoolYearSelectors();
         renderLists();
         updateCounters();
         App.updateStats();
@@ -158,37 +273,83 @@ const sendGravityAlert = (data) => {
     };
 
     console.log("Enviando alerta de gravedad por email...");
-    // emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
-    //    .then(() => showToast("Alerta enviada al coordinador."))
-    //    .catch(err => console.error("Email error:", err));
 };
 
 const renderLists = () => {
-    const render = (container, reports, isPending) => {
-        container.innerHTML = reports.length ? '' : `<div class="text-center py-12 text-slate-400">No hay partes registrados.</div>`;
-        reports.forEach(report => {
-            const date = report.createdAt ? new Date(report.createdAt.toMillis()).toLocaleDateString() : '---';
-            const card = document.createElement('div');
-            card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
-            card.innerHTML = `
-                <div class="flex-grow">
+    // 1. Lista de Pendientes
+    const pendingContainer = document.getElementById('pending-list');
+    pendingContainer.innerHTML = currentPendingReports.length ? '' : `<div class="text-center py-12 text-slate-400">No hay partes pendientes de firma.</div>`;
+    currentPendingReports.forEach(report => {
+        const date = report.createdAt ? new Date(report.createdAt.toMillis()).toLocaleDateString() : (report.date || '---');
+        const card = document.createElement('div');
+        card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
+        card.innerHTML = `
+            <div class="flex-grow">
+                <div class="flex items-center gap-2">
                     <h3 class="font-bold text-slate-800">${report.fullName}</h3>
-                    <p class="text-sm text-slate-500">${report.course} • ${report.location} • ${date}</p>
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 rounded-md">Pendiente</span>
                 </div>
-                <div class="flex gap-2 shrink-0">
-                    ${isPending ?
-                    `<button onclick="App.reviewReport('${report.id}')" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors">Firmar</button>` :
-                    `<button onclick="App.viewReport('${report.id}')" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg font-semibold hover:bg-slate-600 hover:text-white transition-colors">Ver</button>`
-                }
-                    <button onclick="App.editReport('${report.id}', '${isPending ? 'pending' : 'finished'}')" class="p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100"><svg class="w-5 h-5"><use xlink:href="#icon-pencil"></use></svg></button>
-                    <button onclick="App.confirmDelete('${report.id}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><svg class="w-5 h-5"><use xlink:href="#icon-trash"></use></svg></button>
+                <p class="text-sm text-slate-500">${report.course} • ${report.location} • ${date}</p>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="App.reviewReport('${report.id}')" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors">Firmar</button>
+                <button onclick="App.editReport('${report.id}', 'pending')" class="p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100"><svg class="w-5 h-5"><use xlink:href="#icon-pencil"></use></svg></button>
+                <button onclick="App.confirmDelete('${report.id}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><svg class="w-5 h-5"><use xlink:href="#icon-trash"></use></svg></button>
+            </div>
+        `;
+        pendingContainer.appendChild(card);
+    });
+
+    // 2. Lista de Archivados (con filtro por curso escolar y búsqueda)
+    const finishedContainer = document.getElementById('finished-list');
+    let filteredFinished = currentFinishedReports;
+
+    if (currentSchoolYearFilter && currentSchoolYearFilter !== 'all') {
+        filteredFinished = filteredFinished.filter(r => (r.schoolYear || getSchoolYear(r.date)) === currentSchoolYearFilter);
+    }
+
+    if (currentFinishedSearchQuery) {
+        const q = currentFinishedSearchQuery.toLowerCase().trim();
+        filteredFinished = filteredFinished.filter(r =>
+            (r.fullName && r.fullName.toLowerCase().includes(q)) ||
+            (r.course && r.course.toLowerCase().includes(q)) ||
+            (r.location && r.location.toLowerCase().includes(q)) ||
+            (r.description && r.description.toLowerCase().includes(q))
+        );
+    }
+
+    const countSummaryEl = document.getElementById('finished-count-summary');
+    if (countSummaryEl) {
+        if (currentSchoolYearFilter === 'all') {
+            countSummaryEl.textContent = `Mostrando ${filteredFinished.length} partes archivados en total`;
+        } else {
+            countSummaryEl.textContent = `Mostrando ${filteredFinished.length} partes del Curso ${currentSchoolYearFilter} (de ${currentFinishedReports.length} totales)`;
+        }
+    }
+
+    finishedContainer.innerHTML = filteredFinished.length ? '' : `<div class="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-100">No hay partes archivados para el curso seleccionado o la búsqueda indicada.</div>`;
+    filteredFinished.forEach(report => {
+        const date = report.date ? new Date(report.date).toLocaleDateString() : (report.createdAt ? new Date(report.createdAt.toMillis()).toLocaleDateString() : '---');
+        const reportYear = report.schoolYear || getSchoolYear(report.date);
+        const card = document.createElement('div');
+        card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
+        card.innerHTML = `
+            <div class="flex-grow">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-bold text-slate-800">${report.fullName}</h3>
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-md">Curso ${reportYear}</span>
+                    <span class="px-2 py-0.5 text-[10px] font-bold ${report.severity === 'Grave' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'} rounded-md">${report.severity}</span>
                 </div>
-            `;
-            container.appendChild(card);
-        });
-    };
-    render(document.getElementById('pending-list'), currentPendingReports, true);
-    render(document.getElementById('finished-list'), currentFinishedReports, false);
+                <p class="text-sm text-slate-500 mt-1">${report.course} • ${report.location} • ${date} ${report.time ? `(${report.time})` : ''}</p>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="App.viewReport('${report.id}')" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg font-semibold hover:bg-slate-600 hover:text-white transition-colors">Ver</button>
+                <button onclick="App.editReport('${report.id}', 'finished')" class="p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100"><svg class="w-5 h-5"><use xlink:href="#icon-pencil"></use></svg></button>
+                <button onclick="App.confirmDelete('${report.id}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><svg class="w-5 h-5"><use xlink:href="#icon-trash"></use></svg></button>
+            </div>
+        `;
+        finishedContainer.appendChild(card);
+    });
 };
 
 const updateCounters = () => {
@@ -219,7 +380,7 @@ const addIntervenerBlock = (name = '', signature = null, isRemovable = false) =>
     const container = document.getElementById('interveners-container');
     const index = container.children.length;
     const block = document.createElement('div');
-    block.className = 'group p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-blue-200 transition-all';
+    block.className = 'intervener-block group p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-blue-200 transition-all';
     block.innerHTML = `
         <div class="flex justify-between items-center mb-4">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Interviniente ${index + 1}</span>
@@ -294,15 +455,86 @@ window.App = {
         switchView('report-view');
     },
     generateAnnualMemory: () => {
-        const text = `MEMORIA ANUAL DE SALUD - CURSO ${APP_CONFIG.DEFAULT_YEAR}\n` +
-            `CENTRO: ${APP_CONFIG.DEFAULT_SCHOOL}\n` +
-            `-------------------------------------------\n\n` +
-            `Resumen de Incidencias: ${currentFinishedReports.length} partes registrados.\n` +
-            `Graves: ${currentFinishedReports.filter(r => r.severity === 'Grave').length}\n` +
-            `Leves: ${currentFinishedReports.filter(r => r.severity !== 'Grave').length}\n\n` +
-            `Borrador generado automáticamente...`;
-        document.getElementById('mem-full-report').value = text;
+        const year = currentMemoryYearFilter || document.getElementById('filter-memory-year')?.value || localStorage.getItem('schoolYear') || getSchoolYear();
+        const schoolName = localStorage.getItem('schoolName') || APP_CONFIG.DEFAULT_SCHOOL;
+        const reportsForYear = currentFinishedReports.filter(r => (r.schoolYear || getSchoolYear(r.date)) === year);
+        const total = reportsForYear.length;
+        const graves = reportsForYear.filter(r => r.severity === 'Grave').length;
+        const leves = reportsForYear.filter(r => r.severity !== 'Grave').length;
+        const avisos112 = reportsForYear.filter(r => r.emergencyCalled === 'Sí').length;
+        const avisosFamilia = reportsForYear.filter(r => r.parentsCalled === 'Sí').length;
+
+        // Distribución por ubicación
+        const locMap = {};
+        reportsForYear.forEach(r => locMap[r.location] = (locMap[r.location] || 0) + 1);
+        const locLines = Object.entries(locMap)
+            .sort((a, b) => b[1] - a[1])
+            .map(([loc, cnt]) => `  - ${loc}: ${cnt} (${Math.round((cnt / (total || 1)) * 100)}%)`).join('\n');
+
+        // Distribución por curso
+        const courseMap = {};
+        reportsForYear.forEach(r => courseMap[r.course] = (courseMap[r.course] || 0) + 1);
+        const courseLines = Object.entries(courseMap)
+            .sort((a, b) => b[1] - a[1])
+            .map(([c, cnt]) => `  - ${c}: ${cnt} (${Math.round((cnt / (total || 1)) * 100)}%)`).join('\n');
+
+        const text = `===========================================================\n` +
+            `MEMORIA ANUAL DE ACCIDENTES Y SALUD ESCOLAR\n` +
+            `CURSO ESCOLAR: ${year}\n` +
+            `CENTRO: ${schoolName}\n` +
+            `COORDINADOR: ${APP_CONFIG.COORDINATOR_NAME}\n` +
+            `FECHA DE GENERACIÓN: ${new Date().toLocaleDateString('es-ES')}\n` +
+            `===========================================================\n\n` +
+            `1. RESUMEN CUANTITATIVO:\n` +
+            `------------------------\n` +
+            `Total de partes registrados y archivados: ${total}\n` +
+            `Incidencias Leves: ${leves} (${total ? Math.round((leves / total) * 100) : 0}%)\n` +
+            `Incidencias Graves: ${graves} (${total ? Math.round((graves / total) * 100) : 0}%)\n` +
+            `Activaciones de Urgencias / 112: ${avisos112}\n` +
+            `Comunicaciones a las Familias: ${avisosFamilia}\n\n` +
+            `2. DISTRIBUCIÓN POR UBICACIÓN:\n` +
+            `-----------------------------\n` +
+            `${locLines || '  Sin datos registrados para este curso.'}\n\n` +
+            `3. DISTRIBUCIÓN POR NIVELES Y CURSOS:\n` +
+            `------------------------------------\n` +
+            `${courseLines || '  Sin datos registrados para este curso.'}\n\n` +
+            `4. VALORACIÓN CUALITATIVA Y PROPUESTAS DE MEJORA:\n` +
+            `-------------------------------------------------\n` +
+            `Durante el curso escolar ${year}, se ha seguido rigurosamente el protocolo oficial de comunicación y atención ante accidentes en el centro.\n` +
+            `Todos los expedientes han sido debidamente ratificados y archivados con las firmas correspondientes.\n\n` +
+            `Propuestas preventivas recomendadas para el próximo curso:\n` +
+            `- Refuerzo en la supervisión de las zonas y horarios de mayor concentración de incidencias.\n` +
+            `- Revisión periódica de elementos de seguridad en patios e instalaciones deportivas.\n` +
+            `- Actualización continuada del botiquín del centro y formación preventiva del profesorado.`;
+
+        const textarea = document.getElementById('mem-full-report');
+        if (textarea) textarea.value = text;
         switchView('memory-container');
+    },
+    copyMemoryToClipboard: () => {
+        const text = document.getElementById('mem-full-report')?.value;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("Memoria copiada al portapapeles.");
+        }).catch(() => {
+            showToast("Error al copiar texto.", true);
+        });
+    },
+    onFinishedYearChange: (year) => {
+        currentSchoolYearFilter = year;
+        renderLists();
+    },
+    onFinishedSearch: (query) => {
+        currentFinishedSearchQuery = query;
+        renderLists();
+    },
+    onStatsYearChange: (year) => {
+        currentStatsYearFilter = year;
+        App.updateStats();
+    },
+    onMemoryYearChange: (year) => {
+        currentMemoryYearFilter = year;
+        App.generateAnnualMemory();
     },
     saveSettings: () => {
         const newName = document.getElementById('setting-school-name').value;
@@ -310,15 +542,34 @@ window.App = {
         if (newName) localStorage.setItem('schoolName', newName);
         if (newYear) localStorage.setItem('schoolYear', newYear);
         loadLocalSettings();
+        updateSchoolYearSelectors();
         showToast("Ajustes actualizados localmente.");
     },
     updateStats: () => {
-        const data = [...currentPendingReports, ...currentFinishedReports];
+        let data = [...currentPendingReports, ...currentFinishedReports];
+        if (currentStatsYearFilter && currentStatsYearFilter !== 'all') {
+            data = data.filter(r => (r.schoolYear || getSchoolYear(r.date)) === currentStatsYearFilter);
+        }
+
+        const subtitle = document.getElementById('stats-subtitle');
+        if (subtitle) {
+            subtitle.textContent = currentStatsYearFilter === 'all' 
+                ? 'Estadísticas globales (Todos los cursos)' 
+                : `Estadísticas del Curso Escolar ${currentStatsYearFilter}`;
+        }
+
         const total = data.length;
-        if (total === 0) return;
+        document.getElementById('stat-total').textContent = total;
+        if (total === 0) {
+            document.getElementById('stat-grave').textContent = '0';
+            document.getElementById('stat-grave-pct').textContent = '0% del total';
+            document.getElementById('stat-location').textContent = '---';
+            document.getElementById('stats-location-bars').innerHTML = '<div class="text-slate-400 text-xs text-center py-4">No hay datos en este curso</div>';
+            document.getElementById('stats-course-bars').innerHTML = '<div class="text-slate-400 text-xs text-center py-4">No hay datos en este curso</div>';
+            return;
+        }
 
         const graves = data.filter(r => r.severity === 'Grave').length;
-        document.getElementById('stat-total').textContent = total;
         document.getElementById('stat-grave').textContent = graves;
         document.getElementById('stat-grave-pct').textContent = `${Math.round((graves / total) * 100)}% del total`;
 
@@ -372,11 +623,19 @@ window.App = {
         };
     },
     exportToExcel: (singleReport = null) => {
-        const data = singleReport ? [singleReport] : [...currentPendingReports, ...currentFinishedReports];
+        let data;
+        if (singleReport) {
+            data = [singleReport];
+        } else {
+            data = currentFinishedReports;
+            if (currentSchoolYearFilter && currentSchoolYearFilter !== 'all') {
+                data = data.filter(r => (r.schoolYear || getSchoolYear(r.date)) === currentSchoolYearFilter);
+            }
+        }
         if (!data.length) return showToast("No hay datos para exportar", true);
 
-        // Definición de columnas Pro
-        const headers = ["ID", "Fecha", "Hora", "Alumno", "Curso", "Ubicación", "Gravedad", "Descripción", "Actuaciones", "Aviso Familia", "Aviso 112", "Estado"];
+        // Definición de columnas Pro con Curso Escolar incluido
+        const headers = ["ID", "Curso Escolar", "Fecha", "Hora", "Alumno", "Curso", "Ubicación", "Gravedad", "Descripción", "Actuaciones", "Aviso Familia", "Aviso 112", "Estado"];
 
         // Función para limpiar y escapar texto para Excel (CSV con punto y coma)
         const clean = (val) => {
@@ -388,6 +647,7 @@ window.App = {
 
         const rows = data.map(r => [
             clean(r.id),
+            clean(r.schoolYear || getSchoolYear(r.date)),
             clean(r.date),
             clean(r.time),
             clean(r.fullName),
@@ -401,12 +661,12 @@ window.App = {
             clean(r.status === 'pending' ? 'PENDIENTE' : 'FINALIZADO')
         ]);
 
-        // Usamos punto y coma (;) que es el estándar de Excel en España para separar columnas
         const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(";")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = singleReport ? `parte_${singleReport.fullName.replace(/ /g, '_')}.csv` : "BASE_DATOS_ACCIDENTES.csv";
+        const fileNameYear = currentSchoolYearFilter !== 'all' ? currentSchoolYearFilter : 'TODOS_LOS_CURSOS';
+        link.download = singleReport ? `parte_${singleReport.fullName.replace(/ /g, '_')}.csv` : `ACCIDENTES_${fileNameYear}.csv`;
         link.click();
         showToast("Excel generado correctamente.");
     },
@@ -445,7 +705,6 @@ window.App = {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
 
-            // Proporción px to mm
             const pxToMm = pageWidth / mainCanvas.width;
             const pxPageHeight = pageHeight / pxToMm;
 
@@ -478,8 +737,11 @@ window.App = {
         }
     },
     exportBulkPdf: async () => {
-        const data = currentFinishedReports;
-        if (!data.length) return showToast("No hay informes para exportar", true);
+        let data = currentFinishedReports;
+        if (currentSchoolYearFilter && currentSchoolYearFilter !== 'all') {
+            data = data.filter(r => (r.schoolYear || getSchoolYear(r.date)) === currentSchoolYearFilter);
+        }
+        if (!data.length) return showToast("No hay informes para exportar en este curso", true);
 
         const btn = document.getElementById('bulk-pdf-btn');
         btn.disabled = true;
@@ -499,10 +761,9 @@ window.App = {
             for (let i = 0; i < data.length; i++) {
                 btn.innerHTML = `⏳ ${i + 1}/${data.length}`;
 
-                // Renderizar en el clon
-                renderFinalReport(data[i], clone); // Modified to use renderFinalReport with clone
+                renderFinalReport(data[i], clone);
 
-                await new Promise(r => setTimeout(r, 500)); // Esperar renderizado y fuentes
+                await new Promise(r => setTimeout(r, 500));
 
                 await Promise.all(Array.from(clone.querySelectorAll('img')).map(img => {
                     if (img.complete) return Promise.resolve();
@@ -530,7 +791,8 @@ window.App = {
                 if (i < data.length - 1) pdf.addPage();
             }
 
-            pdf.save(`Archivo_Completo_${new Date().toISOString().slice(0, 10)}.pdf`);
+            const fileNameYear = currentSchoolYearFilter !== 'all' ? currentSchoolYearFilter : 'Completo';
+            pdf.save(`Expedientes_${fileNameYear}_${new Date().toISOString().slice(0, 10)}.pdf`);
             document.body.removeChild(clone);
             showToast("Exportación masiva PDF completada.");
         } catch (err) {
@@ -564,8 +826,11 @@ const fillForm = (report) => {
         }
     });
 
-    if (!report.date) {
-        document.getElementById('accident-date').value = new Date().toISOString().split('T')[0];
+    const dateVal = report.date || new Date().toISOString().split('T')[0];
+    document.getElementById('accident-date').value = dateVal;
+    const yearInput = document.getElementById('accident-school-year');
+    if (yearInput) {
+        yearInput.value = report.schoolYear || getSchoolYear(dateVal);
     }
 
     if (report.interveners) report.interveners.forEach((int, i) => addIntervenerBlock(int.name, int.signature, i > 0));
@@ -581,6 +846,12 @@ const renderFinalReport = (data, targetContainer = document) => {
     targetContainer.querySelector('#report-location').textContent = data.location;
     targetContainer.querySelector('#report-time').textContent = data.time;
     targetContainer.querySelector('#report-severity').textContent = data.severity;
+    
+    const yearEl = targetContainer.querySelector('#report-schoolYear');
+    if (yearEl) {
+        yearEl.textContent = data.schoolYear || getSchoolYear(data.date);
+    }
+
     targetContainer.querySelector('#report-description').textContent = data.description;
     targetContainer.querySelector('#report-actionTaken').textContent = data.actionTaken;
     targetContainer.querySelector('#report-parentsCalled').textContent = data.parentsCalled;
@@ -620,6 +891,17 @@ const setupEventListeners = () => {
             switchView(target);
         };
     });
+
+    // Actualización reactiva del curso escolar cuando cambia la fecha del accidente
+    const dateInput = document.getElementById('accident-date');
+    if (dateInput) {
+        dateInput.addEventListener('change', (e) => {
+            const yInput = document.getElementById('accident-school-year');
+            if (yInput) {
+                yInput.value = getSchoolYear(e.target.value);
+            }
+        });
+    }
 
     // Descargas Pro
     const csvBtn = document.getElementById('download-csv-btn');
@@ -696,8 +978,12 @@ const setupEventListeners = () => {
             interveners.push({ name, signature });
         });
 
+        const accidentDate = data.date || new Date().toISOString().split('T')[0];
+        const schoolYear = data.schoolYear || getSchoolYear(accidentDate);
+
         const finalData = {
             ...data,
+            schoolYear,
             interveners,
             coordinatorSignature: signaturePadCoordinator.isEmpty() ? null : signaturePadCoordinator.toDataURL(),
             updatedAt: serverTimestamp()
@@ -708,7 +994,7 @@ const setupEventListeners = () => {
                 finalData.status = 'finished';
                 finalData.finalizedAt = serverTimestamp();
                 await updateDoc(doc(db, "finishedReports", reportId), finalData);
-                showToast("Parte finalizado y archivado.");
+                showToast("Parte finalizado y archivado para el curso " + schoolYear + ".");
             } else if (mode === 'edit') {
                 await updateDoc(doc(db, "finishedReports", reportId), finalData);
                 showToast("Cambios guardados.");
@@ -717,7 +1003,7 @@ const setupEventListeners = () => {
                 finalData.createdAt = serverTimestamp();
                 sendGravityAlert(finalData);
                 await addDoc(reportsCollection, finalData);
-                showToast("Parte creado como pendiente.");
+                showToast("Parte creado como pendiente para el curso " + schoolYear + ".");
             }
             switchView('pending-container');
         } catch (err) {
@@ -729,7 +1015,20 @@ const setupEventListeners = () => {
 
 const loadLocalSettings = () => {
     const name = localStorage.getItem('schoolName') || APP_CONFIG.DEFAULT_SCHOOL;
+    const year = localStorage.getItem('schoolYear') || APP_CONFIG.DEFAULT_YEAR || getSchoolYear();
     document.querySelectorAll('.school-name-text').forEach(el => el.textContent = name);
+
+    const nameInput = document.getElementById('setting-school-name');
+    if (nameInput) nameInput.value = name;
+
+    const yearInput = document.getElementById('setting-school-year');
+    if (yearInput) yearInput.value = year;
+
+    const schoolYearInput = document.getElementById('accident-school-year');
+    if (schoolYearInput && !schoolYearInput.value) {
+        const currentDateVal = document.getElementById('accident-date')?.value || new Date().toISOString().split('T')[0];
+        schoolYearInput.value = getSchoolYear(currentDateVal);
+    }
 };
 
 // Arrancar

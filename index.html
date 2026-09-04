@@ -180,9 +180,18 @@
 
         <!-- View: Statistics -->
         <div id="stats-container" class="app-view hidden space-y-8 animate-fadeIn">
-            <div class="flex justify-between items-center">
-                <h2 class="text-3xl font-black text-slate-800">Análisis de Datos</h2>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Análisis del curso actual</div>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-800">Análisis de Datos</h2>
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest" id="stats-subtitle">Estadísticas por Curso Escolar</div>
+                </div>
+                <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
+                    <label for="filter-stats-year" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Curso:</label>
+                    <select id="filter-stats-year" onchange="App.onStatsYearChange(this.value)"
+                        class="bg-transparent font-bold text-slate-700 text-sm focus:outline-none cursor-pointer">
+                        <option value="all">Todos los cursos</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Stats Grid -->
@@ -263,7 +272,7 @@
                 </section>
 
                 <!-- Section 2 -->
-                <section class="grid md:grid-cols-4 gap-8 pt-8 border-t border-slate-100">
+                <section class="grid md:grid-cols-2 lg:grid-cols-5 gap-6 pt-8 border-t border-slate-100">
                     <div class="col-span-full text-xs font-bold uppercase text-blue-500 tracking-widest">2. Contexto del
                         Accidente</div>
                     <div class="space-y-2">
@@ -289,6 +298,15 @@
                         <input type="time" name="time"
                             class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all"
                             required>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-slate-700 flex items-center justify-between">
+                            <span>Curso Escolar</span>
+                            <span class="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-bold">Auto</span>
+                        </label>
+                        <input type="text" name="schoolYear" id="accident-school-year"
+                            class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 font-bold text-blue-700 focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                            placeholder="2025-2026" required>
                     </div>
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">Gravedad Estimada</label>
@@ -407,8 +425,11 @@
         <!-- View: Finished Reports -->
         <div id="finished-container" class="app-view hidden space-y-6">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <h2 class="text-3xl font-black text-slate-800">Archivo Histórico</h2>
-                <div class="flex gap-2">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-800">Archivo Histórico</h2>
+                    <p class="text-slate-400 text-sm font-medium" id="finished-count-summary">Partes finalizados y archivados</p>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center">
                     <button id="download-csv-btn"
                         class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 shadow-sm transition-all font-bold text-sm">
                         <svg class="w-4 h-4">
@@ -423,6 +444,23 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Barra de Filtro por Curso Escolar y Búsqueda -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Curso Escolar:</span>
+                    <select id="filter-finished-year" onchange="App.onFinishedYearChange(this.value)"
+                        class="w-full md:w-auto p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
+                        <option value="all">Todos los cursos</option>
+                    </select>
+                </div>
+                <div class="w-full md:w-72">
+                    <input type="text" id="search-finished-input" oninput="App.onFinishedSearch(this.value)"
+                        placeholder="Buscar por alumno o curso..."
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
+                </div>
+            </div>
+
             <div id="finished-list" class="grid gap-4">
                 <!-- Listado dinámico -->
             </div>
@@ -477,6 +515,10 @@
                         <div class="report-item">
                             <label class="report-label">Gravedad</label>
                             <div id="report-severity" class="report-value font-bold"></div>
+                        </div>
+                        <div class="report-item">
+                            <label class="report-label">Curso Escolar</label>
+                            <div id="report-schoolYear" class="report-value font-bold text-blue-700"></div>
                         </div>
                     </div>
                 </div>
@@ -553,10 +595,25 @@
         <!-- View: Memory -->
         <div id="memory-container"
             class="app-view hidden bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
-            <h2 class="text-2xl font-bold text-slate-800 mb-6">Borrador de Memoria Anual</h2>
-            <textarea id="mem-full-report" rows="15"
-                class="w-full p-6 bg-slate-50 border border-slate-200 rounded-2xl font-mono text-sm resize-none focus:ring-4 focus:ring-blue-50 outline-none"></textarea>
-            <div class="flex justify-end mt-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Memoria Anual de Accidentes</h2>
+                    <p class="text-slate-400 text-sm">Resumen cuantitativo y cualitativo para la memoria de salud del centro</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label for="filter-memory-year" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Curso:</label>
+                    <select id="filter-memory-year" onchange="App.onMemoryYearChange(this.value)"
+                        class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
+                    </select>
+                    <button onclick="App.generateAnnualMemory()"
+                        class="px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors">Actualizar</button>
+                </div>
+            </div>
+            <textarea id="mem-full-report" rows="16"
+                class="w-full p-6 bg-slate-50 border border-slate-200 rounded-2xl font-mono text-sm resize-none focus:ring-4 focus:ring-blue-50 outline-none leading-relaxed"></textarea>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="App.copyMemoryToClipboard()"
+                    class="px-6 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors">Copiar al portapapeles</button>
                 <button onclick="window.print()"
                     class="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-100">Imprimir
                     Memoria</button>
