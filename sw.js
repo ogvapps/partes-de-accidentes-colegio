@@ -1,4 +1,4 @@
-const CACHE_NAME = 'accidentes-v5';
+const CACHE_NAME = 'accidentes-v7';
 const ASSETS = [
     './',
     './index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
     './apple-touch-icon.png',
     './icon-192.png',
     './icon-512.png',
+    'https://cdn.tailwindcss.com',
     'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js',
     'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js',
     'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js',
@@ -46,7 +47,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200) {
+                if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
                     const responseClone = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, responseClone);
@@ -55,7 +56,13 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             })
             .catch(() => {
-                return caches.match(event.request);
+                return caches.match(event.request).then((cachedResponse) => {
+                    if (cachedResponse) return cachedResponse;
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('./index.html') || caches.match('./');
+                    }
+                    return null;
+                });
             })
     );
 });

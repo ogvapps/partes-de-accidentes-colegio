@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, query, serverTimestamp, updateDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // --- PWA & Service Worker ---
 let deferredPrompt = null;
@@ -103,6 +102,7 @@ let isAdminUnlocked = false;
 let reportViewSource = 'pending';
 let studentsDirectory = [];
 let offlineQueue = [];
+let isSessionAuthenticated = false;
 
 // --- Utilidades de Escape y Formato ---
 const escapeHtml = (str) => {
@@ -113,6 +113,11 @@ const escapeHtml = (str) => {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+};
+
+const normalizeStr = (str) => {
+    if (!str) return '';
+    return String(str).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 };
 
 // --- Persistencia de Cola Offline y Censo Escolar ---
@@ -219,6 +224,7 @@ const learnStudentToDirectory = (fullName, course) => {
 };
 
 const populateDirectoryFromReports = (reports) => {
+    if (localStorage.getItem('censusManuallyCleared') === 'true') return;
     if (!reports || !reports.length) return;
     let changed = false;
     reports.forEach(r => {
@@ -342,10 +348,25 @@ const initApp = async () => {
         }
 
         const app = initializeApp(FIREBASE_CONFIG);
-        getAnalytics(app);
+        try { getAnalytics(app); } catch (e) { /* analytics offline safe */ }
         db = getFirestore(app);
         auth = getAuth(app);
         reportsCollection = collection(db, "finishedReports");
+
+        // Escucha de sesión con Google para persistencia de autenticación
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email && user.email.endsWith('@educarex.es')) {
+                isSessionAuthenticated = true;
+                localStorage.setItem('hasEducarexSession', 'true');
+                localStorage.setItem('userEmail', user.email);
+                localStorage.setItem('userDisplayName', user.displayName || '');
+            } else if (user) {
+                auth.signOut();
+                localStorage.removeItem('hasEducarexSession');
+            } else {
+                isSessionAuthenticated = false;
+            }
+        });
 
         setupEventListeners();
         loadLocalSettings();
@@ -397,6 +418,27 @@ const switchView = (targetId) => {
 const handleAuth = async (pin) => {
     if (pin === APP_CONFIG.ENTRY_PIN) {
         document.getElementById('entry-pin-modal-overlay').classList.add('hidden');
+
+        // 1. Si ya hay usuario autenticado en Firebase con @educarex.es
+        if (auth && auth.currentUser && auth.currentUser.email && auth.currentUser.email.endsWith('@educarex.es')) {
+            document.getElementById('google-auth-modal-overlay').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            startFirestoreListener();
+            initSignaturePads();
+            showToast(`Bienvenido de nuevo, ${auth.currentUser.displayName || 'Profesor/a'}`);
+            return;
+        }
+
+        // 2. Si está offline pero ya se autenticó previamente en este dispositivo (Modo Patio)
+        if (!navigator.onLine && localStorage.getItem('hasEducarexSession') === 'true') {
+            document.getElementById('google-auth-modal-overlay').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            initSignaturePads();
+            showToast("📶 Acceso concedido en Modo Patio (sin conexión a internet).");
+            return;
+        }
+
+        // 3. Mostrar pantalla de autenticación con Google
         document.getElementById('google-auth-modal-overlay').classList.remove('hidden');
     } else {
         showToast("PIN incorrecto.", true);
@@ -418,6 +460,10 @@ const handleGoogleAuth = async () => {
         const email = result.user.email;
 
         if (email.endsWith('@educarex.es')) {
+            isSessionAuthenticated = true;
+            localStorage.setItem('hasEducarexSession', 'true');
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userDisplayName', result.user.displayName || '');
             document.getElementById('google-auth-modal-overlay').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             startFirestoreListener();
@@ -425,11 +471,12 @@ const handleGoogleAuth = async () => {
             showToast(`Bienvenido, ${result.user.displayName}`);
         } else {
             await auth.signOut();
+            localStorage.removeItem('hasEducarexSession');
             showToast("Solo se permiten cuentas @educarex.es", true);
         }
     } catch (error) {
         console.error("Auth Error:", error);
-        showToast("Error de autenticación con Google.", true);
+        showToast("Error de autenticación con Google. Comprueba tu conexión.", true);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Autenticar con Google';
@@ -551,17 +598,7 @@ const startFirestoreListener = () => {
 
 const sendGravityAlert = (data) => {
     if (data.severity !== 'Grave') return;
-
-    // Configuración EmailJS (Requiere ServiceID y TemplateID reales)
-    const templateParams = {
-        to_name: "Coordinador de Salud",
-        student_name: data.fullName,
-        location: data.location,
-        description: data.description,
-        time: data.time
-    };
-
-    console.log("Enviando alerta de gravedad por email...");
+    console.info(`[ALERTA GRAVE] Expediente registrado con máxima prioridad: ${data.fullName || 'Alumno'} en ${data.location || 'Centro'}.`);
 };
 
 const renderLists = () => {
@@ -572,13 +609,18 @@ const renderLists = () => {
         const date = report.createdAt ? (report.createdAt.toMillis ? new Date(report.createdAt.toMillis()).toLocaleDateString() : new Date(report.createdAt).toLocaleDateString()) : (report.date || '---');
         const isOffline = report.isOfflinePending || (report.id && String(report.id).startsWith('offline_'));
         const offlineBadge = isOffline ? `<span class="badge-offline-sync px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-md border border-amber-300">📶 Modo Patio</span>` : '';
+        const sevPendingClass = report.severity === 'Grave' 
+            ? 'bg-red-50 text-red-600' 
+            : (report.severity === 'Moderado' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-600');
+        const sevBadge = report.severity ? `<span class="px-2 py-0.5 text-[10px] font-bold ${sevPendingClass} rounded-md">${escapeHtml(report.severity)}</span>` : '';
         const card = document.createElement('div');
         card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
         card.innerHTML = `
             <div class="flex-grow">
                 <div class="flex items-center gap-2 flex-wrap">
                     <h3 class="font-bold text-slate-800">${escapeHtml(report.fullName)}</h3>
-                    <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 rounded-md">Pendiente</span>
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">Pendiente</span>
+                    ${sevBadge}
                     ${offlineBadge}
                 </div>
                 <p class="text-sm text-slate-500">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date}</p>
@@ -601,12 +643,12 @@ const renderLists = () => {
     }
 
     if (currentFinishedSearchQuery) {
-        const q = currentFinishedSearchQuery.toLowerCase().trim();
+        const qNorm = normalizeStr(currentFinishedSearchQuery);
         filteredFinished = filteredFinished.filter(r =>
-            (r.fullName && r.fullName.toLowerCase().includes(q)) ||
-            (r.course && r.course.toLowerCase().includes(q)) ||
-            (r.location && r.location.toLowerCase().includes(q)) ||
-            (r.description && r.description.toLowerCase().includes(q))
+            normalizeStr(r.fullName).includes(qNorm) ||
+            normalizeStr(r.course).includes(qNorm) ||
+            normalizeStr(r.location).includes(qNorm) ||
+            normalizeStr(r.description).includes(qNorm)
         );
     }
 
@@ -625,6 +667,9 @@ const renderLists = () => {
         const reportYear = report.schoolYear || getSchoolYear(report.date);
         const isOffline = report.isOfflinePending || (report.id && String(report.id).startsWith('offline_'));
         const offlineBadge = isOffline ? `<span class="badge-offline-sync px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-md border border-amber-300">📶 Modo Patio</span>` : '';
+        const sevClass = report.severity === 'Grave' 
+            ? 'bg-red-50 text-red-600' 
+            : (report.severity === 'Moderado' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-600');
         const card = document.createElement('div');
         card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
         card.innerHTML = `
@@ -632,7 +677,7 @@ const renderLists = () => {
                 <div class="flex items-center gap-2 flex-wrap">
                     <h3 class="font-bold text-slate-800">${escapeHtml(report.fullName)}</h3>
                     <span class="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-md">Curso ${reportYear}</span>
-                    <span class="px-2 py-0.5 text-[10px] font-bold ${report.severity === 'Grave' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'} rounded-md">${report.severity}</span>
+                    <span class="px-2 py-0.5 text-[10px] font-bold ${sevClass} rounded-md">${escapeHtml(report.severity || 'Leve')}</span>
                     ${offlineBadge}
                 </div>
                 <p class="text-sm text-slate-500 mt-1">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date} ${report.time ? `(${report.time})` : ''}</p>
@@ -654,45 +699,91 @@ const updateCounters = () => {
 };
 
 // --- Firma y Formulario ---
+const resizeCanvasPreservingData = (canvas, pad) => {
+    if (!canvas || !pad) return;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const newWidth = Math.round(canvas.offsetWidth * ratio);
+    const newHeight = Math.round(canvas.offsetHeight * ratio);
+    if (!newWidth || !newHeight) return;
+    if (canvas.width === newWidth && canvas.height === newHeight) return;
+
+    const data = pad.isEmpty() ? null : pad.toDataURL();
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(ratio, ratio);
+    pad.clear();
+    if (data) {
+        pad.fromDataURL(data);
+    }
+};
+
+const handleAllCanvasResize = () => {
+    if (signaturePadCoordinator) {
+        const coordCanvas = document.getElementById('signature-pad-coordinator');
+        resizeCanvasPreservingData(coordCanvas, signaturePadCoordinator);
+    }
+    document.querySelectorAll('.intervener-block').forEach(block => {
+        if (block._signaturePad) {
+            const canvas = block.querySelector('.signature-canvas');
+            resizeCanvasPreservingData(canvas, block._signaturePad);
+        }
+    });
+};
+
 const initSignaturePads = () => {
     const canvas = document.getElementById('signature-pad-coordinator');
-    signaturePadCoordinator = new SignaturePad(canvas);
-
-    const resizeCanvas = () => {
+    if (canvas && !signaturePadCoordinator) {
+        signaturePadCoordinator = new SignaturePad(canvas);
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        canvas.width = canvas.offsetWidth * ratio;
-        canvas.height = canvas.offsetHeight * ratio;
-        canvas.getContext("2d").scale(ratio, ratio);
-        signaturePadCoordinator.clear();
-    };
+        canvas.width = (canvas.offsetWidth || 300) * ratio;
+        canvas.height = (canvas.offsetHeight || 128) * ratio;
+        const ctx = canvas.getContext("2d");
+        ctx.scale(ratio, ratio);
+    }
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-    addIntervenerBlock();
+    window.removeEventListener('resize', handleAllCanvasResize);
+    window.addEventListener('resize', handleAllCanvasResize);
+
+    const intervenersContainer = document.getElementById('interveners-container');
+    if (intervenersContainer && intervenersContainer.children.length === 0) {
+        addIntervenerBlock();
+    }
+};
+
+const renumberInterveners = () => {
+    const blocks = document.querySelectorAll('.intervener-block');
+    blocks.forEach((block, idx) => {
+        const label = block.querySelector('.intervener-num-label');
+        if (label) label.textContent = `Interviniente ${idx + 1}`;
+    });
 };
 
 const addIntervenerBlock = (name = '', signature = null, isRemovable = false) => {
     const container = document.getElementById('interveners-container');
-    const index = container.children.length;
+    if (!container) return;
+    const blockId = 'intervener_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     const block = document.createElement('div');
+    block.id = blockId;
     block.className = 'intervener-block group p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-blue-200 transition-all';
+    const currentCount = container.querySelectorAll('.intervener-block').length;
     block.innerHTML = `
         <div class="flex justify-between items-center mb-4">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Interviniente ${index + 1}</span>
-            ${isRemovable ? `<button type="button" class="text-red-400 hover:text-red-600" onclick="this.parentElement.parentElement.remove()">Eliminar</button>` : ''}
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 intervener-num-label">Interviniente ${currentCount + 1}</span>
+            ${isRemovable ? `<button type="button" class="text-red-400 hover:text-red-600 text-xs font-bold transition-colors cursor-pointer" onclick="App.removeIntervener('${blockId}')">Eliminar</button>` : ''}
         </div>
         <div class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-slate-600 mb-1">Nombre Completo</label>
-                <input type="text" name="intervenerName" value="${name}" class="w-full p-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none" required>
+                <input type="text" name="intervenerName" value="${escapeHtml(name)}" class="w-full p-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none" required>
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-600 mb-1">Firma</label>
                 <canvas class="signature-canvas w-full h-32 rounded-lg"></canvas>
                 <div class="flex justify-between items-center mt-1">
-                    <button type="button" class="text-xs text-blue-500 hover:underline underline-offset-4" onclick="App.clearSignature(this)">Limpiar firma</button>
+                    <button type="button" class="text-xs text-blue-500 hover:underline underline-offset-4 cursor-pointer" onclick="App.clearSignature(this)">Limpiar firma</button>
                     <div class="signature-hint">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z"></path></svg>
                         Usa el móvil en horizontal para firmar mejor
                     </div>
                 </div>
@@ -701,10 +792,21 @@ const addIntervenerBlock = (name = '', signature = null, isRemovable = false) =>
     `;
     container.appendChild(block);
     const canvas = block.querySelector('.signature-canvas');
-    const pad = new SignaturePad(canvas);
-    intervenerPads.push(pad);
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = (canvas.offsetWidth || 300) * ratio;
+    canvas.height = (canvas.offsetHeight || 128) * ratio;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(ratio, ratio);
 
-    if (signature) setTimeout(() => pad.fromDataURL(signature), 50);
+    const pad = new SignaturePad(canvas);
+    block._signaturePad = pad;
+
+    if (signature) {
+        setTimeout(() => {
+            if (pad && typeof pad.fromDataURL === 'function') pad.fromDataURL(signature);
+        }, 50);
+    }
+    renumberInterveners();
 };
 
 // --- Exportación de objeto global para eventos inline ---
@@ -774,9 +876,25 @@ window.App = {
     },
     addIntervener: () => addIntervenerBlock('', null, true),
     clearSignature: (btn) => {
-        const canvas = btn.parentElement.querySelector('canvas');
-        const pad = intervenerPads.find(p => p._canvas === canvas) || signaturePadCoordinator;
-        if (pad) pad.clear();
+        const block = btn.closest('.intervener-block');
+        if (block && block._signaturePad) {
+            block._signaturePad.clear();
+            return;
+        }
+        if (signaturePadCoordinator) {
+            signaturePadCoordinator.clear();
+        }
+    },
+    removeIntervener: (blockId) => {
+        const block = document.getElementById(blockId);
+        if (block) {
+            if (block._signaturePad) {
+                block._signaturePad.clear();
+                delete block._signaturePad;
+            }
+            block.remove();
+            renumberInterveners();
+        }
     },
     reviewReport: (id) => {
         const report = currentPendingReports.find(r => r.id === id);
@@ -837,7 +955,7 @@ window.App = {
             `MEMORIA ANUAL DE ACCIDENTES Y SALUD ESCOLAR\n` +
             `CURSO ESCOLAR: ${year}\n` +
             `CENTRO: ${schoolName}\n` +
-            `COORDINADOR: ${APP_CONFIG.COORDINATOR_NAME}\n` +
+            `COORDINADOR/A: ${localStorage.getItem("coordinatorName") || APP_CONFIG.COORDINATOR_NAME}\n` +
             `FECHA DE GENERACIÓN: ${new Date().toLocaleDateString('es-ES')}\n` +
             `===========================================================\n\n` +
             `1. RESUMEN CUANTITATIVO:\n` +
@@ -892,13 +1010,15 @@ window.App = {
         App.generateAnnualMemory();
     },
     saveSettings: () => {
-        const newName = document.getElementById('setting-school-name').value;
-        const newYear = document.getElementById('setting-school-year').value;
-        if (newName) localStorage.setItem('schoolName', newName);
-        if (newYear) localStorage.setItem('schoolYear', newYear);
+        const newName = document.getElementById('setting-school-name')?.value;
+        const newYear = document.getElementById('setting-school-year')?.value;
+        const newCoord = document.getElementById('setting-coordinator-name')?.value;
+        if (newName) localStorage.setItem('schoolName', newName.trim());
+        if (newYear) localStorage.setItem('schoolYear', newYear.trim());
+        if (newCoord) localStorage.setItem('coordinatorName', newCoord.trim());
         loadLocalSettings();
         updateSchoolYearSelectors();
-        showToast("Ajustes actualizados localmente.");
+        showToast("Ajustes actualizados correctamente.");
     },
     updateStats: () => {
         let data = [...currentPendingReports, ...currentFinishedReports];
@@ -941,7 +1061,7 @@ window.App = {
             return `
                 <div class="space-y-1">
                     <div class="flex justify-between text-xs font-bold text-slate-600">
-                        <span>${loc}</span><span>${count}</span>
+                        <span>${escapeHtml(loc)}</span><span>${count}</span>
                     </div>
                     <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div class="h-full bg-blue-500 transition-all duration-1000" style="width: ${pct}%"></div>
@@ -959,7 +1079,7 @@ window.App = {
             return `
                 <div class="space-y-1">
                     <div class="flex justify-between text-xs font-bold text-slate-600">
-                        <span>${course}</span><span>${count}</span>
+                        <span>${escapeHtml(course)}</span><span>${count}</span>
                     </div>
                     <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div class="h-full bg-indigo-500 transition-all duration-1000" style="width: ${pct}%"></div>
@@ -977,6 +1097,7 @@ window.App = {
                 saveOfflineQueue();
                 currentPendingReports = currentPendingReports.filter(r => r.id !== id);
                 currentFinishedReports = currentFinishedReports.filter(r => r.id !== id);
+                allLoadedReports = allLoadedReports.filter(r => r.id !== id);
                 renderLists();
                 updateCounters();
                 App.updateStats();
@@ -1023,15 +1144,21 @@ window.App = {
                 }
                 uploadData.updatedAt = serverTimestamp();
 
-                if (mode === 'finalize') {
+                const isOfflineLocalNew = String(reportId).startsWith('offline_') || mode === 'new';
+
+                if (isOfflineLocalNew) {
+                    const statusShouldBe = uploadData.status || 'pending';
+                    uploadData.status = 'pending';
+                    const docRef = await addDoc(reportsCollection, uploadData);
+                    if (statusShouldBe === 'finished' || mode === 'finalize') {
+                        await updateDoc(docRef, { status: 'finished', finalizedAt: serverTimestamp() });
+                    }
+                } else if (mode === 'finalize') {
                     uploadData.status = 'finished';
                     uploadData.finalizedAt = serverTimestamp();
                     await updateDoc(doc(db, "finishedReports", reportId), uploadData);
                 } else if (mode === 'edit') {
                     await updateDoc(doc(db, "finishedReports", reportId), uploadData);
-                } else {
-                    uploadData.status = 'pending';
-                    await addDoc(reportsCollection, uploadData);
                 }
 
                 offlineQueue = offlineQueue.filter(q => q.localId !== localId);
@@ -1061,6 +1188,7 @@ window.App = {
             if (typeof XLSX === 'undefined') {
                 throw new Error("Librería SheetJS no disponible.");
             }
+            localStorage.removeItem('censusManuallyCleared');
             const buffer = await file.arrayBuffer();
             const workbook = XLSX.read(buffer, { type: 'array' });
             const firstSheetName = workbook.SheetNames[0];
@@ -1130,6 +1258,7 @@ window.App = {
         }
         if (confirm(`¿Seguro que deseas eliminar los ${studentsDirectory.length} alumnos del censo local?`)) {
             studentsDirectory = [];
+            localStorage.setItem('censusManuallyCleared', 'true');
             saveStudentsDirectory();
             updateCensusUI();
             hideHealthAlert();
@@ -1486,12 +1615,14 @@ window.App = {
 
             const cleanName = (report.fullName || 'Alumno').trim().replace(/[\s/\\?%*:|"<>]/g, '_');
             pdf.save(`Expediente_${cleanName}_${report.date || ''}.pdf`);
-            document.body.removeChild(clone);
             showToast("Expediente PDF oficial generado.");
         } catch (err) {
             console.error("Error en exportPdf:", err);
             showToast("Error al expedir PDF", true);
         } finally {
+            if (clone && clone.parentNode) {
+                clone.parentNode.removeChild(clone);
+            }
             if (btn) {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -1875,7 +2006,9 @@ window.App = {
                 pdf.text(expedLabel, marginX, pageHeight - 6);
             }
 
-            document.body.removeChild(clone);
+            if (clone && clone.parentNode) {
+                clone.parentNode.removeChild(clone);
+            }
 
             // ==========================================
             // PASO FINAL: NUMERACIÓN CORRELATIVA DE PÁGINAS
@@ -1897,6 +2030,9 @@ window.App = {
             console.error("Error al generar Dossier PDF:", err);
             showToast("Error al generar el dossier PDF oficial", true);
         } finally {
+            if (clone && clone.parentNode) {
+                clone.parentNode.removeChild(clone);
+            }
             if (btn) {
                 btn.innerHTML = originalContent;
                 btn.disabled = false;
@@ -1905,11 +2041,22 @@ window.App = {
     }
 };
 
-const fillForm = (report) => {
+const fillForm = (report = {}) => {
     const form = document.getElementById('accident-form');
+    if (!form) return;
     form.reset();
-    document.getElementById('interveners-container').innerHTML = '';
-    intervenerPads = [];
+
+    const hiddenInput = document.getElementById('editingReportId');
+    if (hiddenInput) {
+        hiddenInput.value = report.id || '';
+        if (!report.id) {
+            delete hiddenInput.dataset.mode;
+            delete hiddenInput.dataset.status;
+        }
+    }
+
+    const intervenersContainer = document.getElementById('interveners-container');
+    if (intervenersContainer) intervenersContainer.innerHTML = '';
 
     // Limpiar alertas de salud previas y sugerencias
     hideHealthAlert();
@@ -1922,7 +2069,7 @@ const fillForm = (report) => {
     Object.keys(report).forEach(key => {
         const input = form.elements[key];
         if (input) {
-            if (input.type === 'radio') {
+            if (input instanceof RadioNodeList || input.type === 'radio') {
                 const radio = form.querySelector(`input[name="${key}"][value="${report[key]}"]`);
                 if (radio) radio.checked = true;
             } else {
@@ -1931,8 +2078,15 @@ const fillForm = (report) => {
         }
     });
 
-    const dateVal = report.date || new Date().toISOString().split('T')[0];
-    document.getElementById('accident-date').value = dateVal;
+    const now = new Date();
+    const dateVal = report.date || now.toISOString().split('T')[0];
+    const dateInput = document.getElementById('accident-date');
+    if (dateInput) dateInput.value = dateVal;
+
+    const timeVal = report.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeInput = form.querySelector('input[name="time"]');
+    if (timeInput) timeInput.value = timeVal;
+
     const yearInput = document.getElementById('accident-school-year');
     if (yearInput) {
         yearInput.value = report.schoolYear || getSchoolYear(dateVal);
@@ -1950,9 +2104,18 @@ const fillForm = (report) => {
         }
     }
 
-    if (report.interveners) report.interveners.forEach((int, i) => addIntervenerBlock(int.name, int.signature, i > 0));
-    else addIntervenerBlock(); // Nuevo parte
-    if (report.coordinatorSignature) signaturePadCoordinator.fromDataURL(report.coordinatorSignature);
+    if (report.interveners && report.interveners.length) {
+        report.interveners.forEach((int, i) => addIntervenerBlock(int.name, int.signature, i > 0));
+    } else {
+        addIntervenerBlock(); // Nuevo parte
+    }
+
+    if (signaturePadCoordinator) {
+        signaturePadCoordinator.clear();
+        if (report.coordinatorSignature) {
+            signaturePadCoordinator.fromDataURL(report.coordinatorSignature);
+        }
+    }
 };
 
 const renderFinalReport = (data, targetContainer = document) => {
@@ -1984,9 +2147,9 @@ const renderFinalReport = (data, targetContainer = document) => {
                     sigs.innerHTML += `
                         <div class="signature-card">
                             <div class="signature-space">
-                                <img src="${int.signature}" class="signature-img" alt="Firma ${int.name || 'Interviniente'}">
+                                <img src="${int.signature}" class="signature-img" alt="Firma ${escapeHtml(int.name || 'Interviniente')}">
                             </div>
-                            <div class="signature-meta">Interviniente: ${int.name || '---'}</div>
+                            <div class="signature-meta">Interviniente: ${escapeHtml(int.name || '---')}</div>
                         </div>
                     `;
                 }
@@ -2166,8 +2329,17 @@ const setupEventListeners = () => {
 
     // Logout
     document.getElementById('logout-btn').onclick = async () => {
-        if (confirm("¿Cerrar sesión y bloquear la aplicación?")) {
-            await auth.signOut();
+        if (confirm("¿Cerrar sesión y bloquear la aplicación en este dispositivo?")) {
+            try {
+                if (auth) await auth.signOut();
+            } catch (e) {
+                console.warn("SignOut error:", e);
+            }
+            // Limpieza de datos sensibles locales por RGPD en dispositivos compartidos
+            localStorage.removeItem('cachedReports');
+            localStorage.removeItem('hasEducarexSession');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userDisplayName');
             window.location.reload();
         }
     };
@@ -2180,12 +2352,16 @@ const setupEventListeners = () => {
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
 
-        // Validaciones
+        // Recoger firmas de intervinientes de forma segura directamente del elemento DOM
         const interveners = [];
-        document.querySelectorAll('.intervener-block').forEach((block, i) => {
-            const name = block.querySelector('input[name="intervenerName"]').value;
-            const signature = intervenerPads[i].toDataURL();
-            interveners.push({ name, signature });
+        document.querySelectorAll('.intervener-block').forEach((block) => {
+            const nameInput = block.querySelector('input[name="intervenerName"]');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const pad = block._signaturePad;
+            const signature = (pad && !pad.isEmpty()) ? pad.toDataURL() : null;
+            if (name || signature) {
+                interveners.push({ name, signature });
+            }
         });
 
         const accidentDate = data.date || new Date().toISOString().split('T')[0];
@@ -2195,7 +2371,7 @@ const setupEventListeners = () => {
             ...data,
             schoolYear,
             interveners,
-            coordinatorSignature: signaturePadCoordinator.isEmpty() ? null : signaturePadCoordinator.toDataURL(),
+            coordinatorSignature: (signaturePadCoordinator && !signaturePadCoordinator.isEmpty()) ? signaturePadCoordinator.toDataURL() : null,
             updatedAt: serverTimestamp()
         };
 
@@ -2223,7 +2399,9 @@ const setupEventListeners = () => {
             }
         } catch (err) {
             console.warn("Guardando localmente en Modo Patio:", err);
-            const localId = mode === 'new' ? 'offline_' + Date.now() : reportId;
+            const isLocalOfflineReport = mode === 'new' || String(reportId).startsWith('offline_');
+            const localId = isLocalOfflineReport ? (mode === 'new' ? 'offline_' + Date.now() : reportId) : reportId;
+
             const offlineReportData = {
                 ...finalData,
                 id: localId,
@@ -2231,25 +2409,40 @@ const setupEventListeners = () => {
                 isOfflinePending: true
             };
 
-            offlineQueue.push({
-                localId,
-                mode,
-                reportId: localId,
-                data: offlineReportData,
-                timestamp: Date.now()
-            });
+            if (mode === 'finalize') {
+                offlineReportData.status = 'finished';
+            } else if (mode === 'edit') {
+                offlineReportData.status = document.getElementById('editingReportId').dataset.status || 'pending';
+            } else {
+                offlineReportData.status = 'pending';
+            }
+
+            // Gestionar cola offline sin duplicar ni romper updates de documentos no existentes
+            const existingQueueIdx = offlineQueue.findIndex(q => q.localId === localId || q.reportId === localId);
+            if (existingQueueIdx >= 0) {
+                offlineQueue[existingQueueIdx].data = offlineReportData;
+                if (mode === 'finalize') offlineQueue[existingQueueIdx].data.status = 'finished';
+            } else {
+                offlineQueue.push({
+                    localId,
+                    mode,
+                    reportId: localId,
+                    data: offlineReportData,
+                    timestamp: Date.now()
+                });
+            }
             saveOfflineQueue();
 
             if (mode === 'finalize') {
-                offlineReportData.status = 'finished';
                 currentPendingReports = currentPendingReports.filter(r => r.id !== reportId);
-                currentFinishedReports.unshift(offlineReportData);
+                const finIdx = currentFinishedReports.findIndex(r => r.id === localId);
+                if (finIdx >= 0) currentFinishedReports[finIdx] = offlineReportData;
+                else currentFinishedReports.unshift(offlineReportData);
             } else if (mode === 'edit') {
                 const targetList = document.getElementById('editingReportId').dataset.status === 'pending' ? currentPendingReports : currentFinishedReports;
                 const idx = targetList.findIndex(r => r.id === reportId);
                 if (idx >= 0) targetList[idx] = offlineReportData;
             } else {
-                offlineReportData.status = 'pending';
                 currentPendingReports.unshift(offlineReportData);
             }
 
@@ -2262,20 +2455,31 @@ const setupEventListeners = () => {
 
         // Aprender automáticamente alumno para el censo escolar
         learnStudentToDirectory(finalData.fullName, finalData.course);
-        switchView('pending-container');
+        const editingStatus = document.getElementById('editingReportId')?.dataset?.status;
+        const targetView = (mode === 'finalize' || (mode === 'edit' && editingStatus === 'finished')) 
+            ? 'finished-container' 
+            : 'pending-container';
+        fillForm({});
+        switchView(targetView);
     };
 };
 
 const loadLocalSettings = () => {
     const name = localStorage.getItem('schoolName') || APP_CONFIG.DEFAULT_SCHOOL;
     const year = localStorage.getItem('schoolYear') || APP_CONFIG.DEFAULT_YEAR || getSchoolYear();
+    const coordinator = localStorage.getItem('coordinatorName') || APP_CONFIG.COORDINATOR_NAME;
+
     document.querySelectorAll('.school-name-text').forEach(el => el.textContent = name);
+    document.querySelectorAll('.coordinator-name-text').forEach(el => el.textContent = coordinator);
 
     const nameInput = document.getElementById('setting-school-name');
     if (nameInput) nameInput.value = name;
 
     const yearInput = document.getElementById('setting-school-year');
     if (yearInput) yearInput.value = year;
+
+    const coordInput = document.getElementById('setting-coordinator-name');
+    if (coordInput) coordInput.value = coordinator;
 
     const schoolYearInput = document.getElementById('accident-school-year');
     if (schoolYearInput && !schoolYearInput.value) {

@@ -81,11 +81,35 @@ body {
 .report-page {
     padding: 60px;
     background: #ffffff !important;
-    width: 800px;
+    max-width: 800px;
+    width: 100%;
+    box-sizing: border-box;
     margin: 0 auto;
     color: #1e293b;
     font-family: 'Inter', sans-serif;
     position: relative;
+}
+
+@media (max-width: 768px) {
+    .report-page {
+        padding: 24px 16px;
+    }
+    .report-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .report-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+    }
+    .signatures-wrapper {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+        margin-top: 24px !important;
+    }
 }
 
 /* Membrete Elegante */

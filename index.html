@@ -34,12 +34,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- SheetJS (Excel .xlsx) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- EmailJS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script type="text/javascript">
-        (function () { emailjs.init("YOUR_PUBLIC_KEY"); })();
-    </script>
-
     <!-- Custom Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -234,6 +228,7 @@
                     </svg>
                 </button>
             </nav>
+            </div>
         </header>
 
         <!-- View: Statistics -->
@@ -409,12 +404,17 @@
                             <label
                                 class="flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm">
                                 <input type="radio" name="severity" value="Leve" class="hidden" required checked>
-                                <span class="text-sm font-bold">Leve</span>
+                                <span class="text-sm font-bold text-slate-700">Leve</span>
+                            </label>
+                            <label
+                                class="flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm">
+                                <input type="radio" name="severity" value="Moderado" class="hidden">
+                                <span class="text-sm font-bold text-amber-600">Moderado</span>
                             </label>
                             <label
                                 class="flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm">
                                 <input type="radio" name="severity" value="Grave" class="hidden">
-                                <span class="text-sm font-bold">Grave</span>
+                                <span class="text-sm font-bold text-red-600">Grave</span>
                             </label>
                         </div>
                     </div>
@@ -484,7 +484,7 @@
                             <div>
                                 <p class="text-[10px] uppercase font-bold tracking-widest opacity-70">Coordinador de
                                     Salud</p>
-                                <p class="font-bold">Orestes González Villanueva</p>
+                                <p class="font-bold coordinator-name-text">Orestes González Villanueva</p>
                             </div>
                             <button type="button" onclick="App.clearSignature(this)"
                                 class="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition-colors">Limpiar
@@ -750,6 +750,12 @@
                     <input type="text" id="setting-school-year"
                         class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none"
                         placeholder="Ej: 2025-2026">
+                </div>
+                <div class="space-y-2 col-span-full">
+                    <label class="block text-sm font-semibold text-slate-700">Coordinador/a de Salud Escolar</label>
+                    <input type="text" id="setting-coordinator-name"
+                        class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none"
+                        placeholder="Ej: Orestes González Villanueva">
                 </div>
                 <div class="col-span-full pt-4">
                     <button onclick="App.saveSettings()"
