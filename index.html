@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>Partes de Accidentes - Salud Escolar</title>
 
     <!-- App Manifest & PWA Meta -->
@@ -101,9 +101,9 @@
 
     <!-- Google Auth Screen -->
     <div id="google-auth-modal-overlay"
-        class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[100]">
+        class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[100] p-4">
         <div
-            class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center transform transition-all border border-slate-100">
+            class="bg-white p-6 sm:p-10 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-sm text-center transform transition-all border border-slate-100 max-h-[90vh] overflow-y-auto">
             <div class="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
                     <path
@@ -132,102 +132,106 @@
     </div>
 
     <!-- Main Application -->
-    <div id="main-app" class="hidden max-w-5xl mx-auto px-4 py-8">
+    <div id="main-app" class="hidden max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
 
         <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-10 no-print gap-4">
-            <div class="flex items-center gap-3.5">
-                <img src="icon-192.png" alt="Logo Salud Escolar" class="w-12 h-12 rounded-2xl shadow-sm border border-slate-100 object-contain p-1 bg-white flex-shrink-0">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 sm:mb-10 no-print gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
+                <img src="icon-192.png" alt="Logo Salud Escolar" class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl shadow-sm border border-slate-100 object-contain p-1 bg-white flex-shrink-0">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight school-name-text text-center md:text-left">
+                    <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight school-name-text text-left">
                         Colegio Madre Matilde</h1>
-                    <p class="text-slate-500 font-medium text-xs md:text-sm text-center md:text-left">Gestión de Accidentes y Salud</p>
+                    <p class="text-slate-500 font-medium text-xs md:text-sm text-left">Gestión de Accidentes y Salud</p>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center justify-center gap-2.5">
-                <!-- Offline Badge & Sync -->
-                <div id="offline-status-badge" class="hidden flex items-center gap-2 px-3.5 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold">
-                    <svg class="w-4 h-4 text-amber-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
-                        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
-                        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
-                        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
-                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
-                        <line x1="12" y1="20" x2="12.01" y2="20"></line>
-                    </svg>
-                    <span>Modo Patio (Sin red)</span>
-                    <span id="offline-queue-counter" class="hidden px-2 py-0.5 bg-amber-200 text-amber-950 rounded-full text-[10px] font-extrabold">0 pendientes</span>
+            <div class="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2.5 w-full md:w-auto">
+                <!-- Status Row on Mobile / Inline on Tablet+ -->
+                <div class="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+                    <!-- Offline Badge & Sync -->
+                    <div id="offline-status-badge" class="hidden flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold">
+                        <svg class="w-4 h-4 text-amber-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+                            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+                            <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+                            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+                            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                        </svg>
+                        <span>Modo Patio (Sin red)</span>
+                        <span id="offline-queue-counter" class="hidden px-2 py-0.5 bg-amber-200 text-amber-950 rounded-full text-[10px] font-extrabold">0 pendientes</span>
+                    </div>
+                    <button id="sync-offline-now-btn" onclick="App.syncOfflineQueue()"
+                        class="hidden flex items-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <span>Sincronizar (<span id="sync-btn-count">0</span>)</span>
+                    </button>
+                    <button id="pwa-header-install-btn" onclick="App.triggerInstallPrompt()"
+                        class="group flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-blue-700 hover:text-white rounded-xl font-bold text-xs shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
+                        title="Descargar e instalar la app en tu escritorio o pantalla de inicio">
+                        <svg class="w-4 h-4 text-blue-600 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Descargar App</span>
+                    </button>
                 </div>
-                <button id="sync-offline-now-btn" onclick="App.syncOfflineQueue()"
-                    class="hidden flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="23 4 23 10 17 10"></polyline>
-                        <polyline points="1 20 1 14 7 14"></polyline>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                    </svg>
-                    <span>Sincronizar (<span id="sync-btn-count">0</span>)</span>
-                </button>
-                <button id="pwa-header-install-btn" onclick="App.triggerInstallPrompt()"
-                    class="group flex items-center gap-2 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-blue-700 hover:text-white rounded-xl font-bold text-xs shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
-                    title="Descargar e instalar la app en tu escritorio o pantalla de inicio">
-                    <svg class="w-4 h-4 text-blue-600 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    <span>Descargar App</span>
-                </button>
-                <nav id="main-nav" class="flex p-1 bg-slate-200/50 rounded-2xl gap-1">
-                <button data-target="form-container"
-                    class="nav-button flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold"
-                    data-active="true">
-                    <svg class="w-4 h-4">
-                        <use xlink:href="#icon-plus"></use>
-                    </svg>Nuevo
-                </button>
-                <button id="nav-memory" data-target="memory-container" onclick="App.generateAnnualMemory()"
-                    class="nav-button hidden flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold">
-                    Memoria
-                </button>
-                <button id="nav-settings" data-target="settings-container"
-                    onclick="App.switchView('settings-container')"
-                    class="nav-button hidden flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold">
-                    Ajustes
-                </button>
-                <button data-target="pending-container"
-                    class="nav-button flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold relative">
-                    <svg class="w-4 h-4">
-                        <use xlink:href="#icon-clock"></use>
-                    </svg>Pendientes
-                    <span id="pending-count"
-                        class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center hidden border-2 border-white">0</span>
-                </button>
-                <button data-target="finished-container"
-                    class="nav-button flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold">
-                    <svg class="w-4 h-4">
-                        <use xlink:href="#icon-check"></use>
-                    </svg>Archivo
-                </button>
-                <button id="nav-stats" data-target="stats-container"
-                    class="nav-button flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold">
-                    <svg class="w-4 h-4">
-                        <use xlink:href="#icon-chart"></use>
-                    </svg>Estadísticas
-                </button>
-                <button id="nav-admin" class="p-3 text-slate-500 hover:text-blue-600 rounded-xl transition-colors">
-                    <svg class="w-5 h-5">
-                        <use xlink:href="#icon-settings"></use>
-                    </svg>
-                </button>
-                <button id="logout-btn" class="p-3 text-red-400 hover:text-red-600 rounded-xl transition-colors"
-                    title="Cerrar Sesión">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                </button>
-            </nav>
+                <nav id="main-nav" class="flex p-1 bg-slate-200/50 rounded-2xl gap-1 max-w-full overflow-x-auto no-scrollbar">
+                    <button data-target="form-container"
+                        class="nav-button flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap"
+                        data-active="true">
+                        <svg class="w-4 h-4">
+                            <use xlink:href="#icon-plus"></use>
+                        </svg>Nuevo
+                    </button>
+                    <button id="nav-memory" data-target="memory-container" onclick="App.generateAnnualMemory()"
+                        class="nav-button hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap">
+                        Memoria
+                    </button>
+                    <button id="nav-settings" data-target="settings-container"
+                        onclick="App.switchView('settings-container')"
+                        class="nav-button hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap">
+                        Ajustes
+                    </button>
+                    <button data-target="pending-container"
+                        class="nav-button flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap relative">
+                        <svg class="w-4 h-4">
+                            <use xlink:href="#icon-clock"></use>
+                        </svg>Pendientes
+                        <span id="pending-count"
+                            class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center hidden border-2 border-white">0</span>
+                    </button>
+                    <button data-target="finished-container"
+                        class="nav-button flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap">
+                        <svg class="w-4 h-4">
+                            <use xlink:href="#icon-check"></use>
+                        </svg>Archivo
+                    </button>
+                    <button id="nav-stats" data-target="stats-container"
+                        class="nav-button flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap">
+                        <svg class="w-4 h-4">
+                            <use xlink:href="#icon-chart"></use>
+                        </svg>Estadísticas
+                    </button>
+                    <button id="nav-admin" class="p-2.5 sm:p-3 text-slate-500 hover:text-blue-600 rounded-xl transition-colors"
+                        title="Ajustes y Administración" aria-label="Ajustes y Administración">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5">
+                            <use xlink:href="#icon-settings"></use>
+                        </svg>
+                    </button>
+                    <button id="logout-btn" class="p-2.5 sm:p-3 text-red-400 hover:text-red-600 rounded-xl transition-colors"
+                        title="Cerrar Sesión" aria-label="Cerrar Sesión">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </nav>
             </div>
         </header>
 
@@ -284,15 +288,15 @@
 
         <!-- View: New Form -->
         <div id="form-container"
-            class="app-view bg-white p-6 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
-            <h2 id="form-title" class="text-2xl font-bold text-slate-800 mb-8 border-b border-slate-50 pb-6">Registro de
+            class="app-view bg-white p-4 sm:p-8 md:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-100">
+            <h2 id="form-title" class="text-xl sm:text-2xl font-bold text-slate-800 mb-6 sm:mb-8 border-b border-slate-50 pb-4 sm:pb-6">Registro de
                 Comunicación de Accidente</h2>
 
-            <form id="accident-form" class="space-y-12">
+            <form id="accident-form" class="space-y-8 sm:space-y-12">
                 <input type="hidden" id="editingReportId">
 
                 <!-- Section 1 -->
-                <section class="grid md:grid-cols-2 gap-8">
+                <section class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
                     <div class="col-span-full text-xs font-bold uppercase text-blue-500 tracking-widest flex items-center justify-between">
                         <span>1. Identificación del Alumno/a</span>
                         <span id="census-status-indicator" class="text-[10px] font-bold text-slate-400 normal-case"></span>
@@ -300,7 +304,7 @@
                     <div class="space-y-2 relative">
                         <label class="block text-sm font-semibold text-slate-700">Nombre y Apellidos</label>
                         <input type="text" name="fullName" id="accident-fullName" autocomplete="off"
-                            class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm sm:text-base"
                             placeholder="Escribe para buscar alumno/a..."
                             required>
                         <!-- Desplegable reactivo de autocompletado -->
@@ -309,7 +313,7 @@
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">Curso</label>
                         <select name="course" id="accident-course"
-                            class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none appearance-none"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none appearance-none text-sm sm:text-base cursor-pointer"
                             required>
                             <option value="">Seleccionar curso...</option>
                             <option value="1º Infantil">1º Infantil</option>
@@ -362,13 +366,13 @@
                 </section>
 
                 <!-- Section 2 -->
-                <section class="grid md:grid-cols-2 lg:grid-cols-5 gap-6 pt-8 border-t border-slate-100">
+                <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t border-slate-100">
                     <div class="col-span-full text-xs font-bold uppercase text-blue-500 tracking-widest">2. Contexto del
                         Accidente</div>
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">Ubicación</label>
                         <select name="location"
-                            class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none text-sm sm:text-base cursor-pointer"
                             required>
                             <option value="Patio">Patio</option>
                             <option value="Gimnasio">Gimnasio</option>
@@ -380,13 +384,13 @@
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">Fecha</label>
                         <input type="date" name="date" id="accident-date"
-                            class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm sm:text-base"
                             required>
                     </div>
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">Hora</label>
                         <input type="time" name="time"
-                            class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm sm:text-base"
                             required>
                     </div>
                     <div class="space-y-2">
@@ -395,99 +399,99 @@
                             <span class="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-bold">Auto</span>
                         </label>
                         <input type="text" name="schoolYear" id="accident-school-year"
-                            class="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 font-bold text-blue-700 focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl bg-slate-50 font-bold text-blue-700 focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm sm:text-base"
                             placeholder="2025-2026" required>
                     </div>
-                    <div class="space-y-2">
+                    <div class="space-y-2 sm:col-span-2 lg:col-span-1">
                         <label class="block text-sm font-semibold text-slate-700">Gravedad Estimada</label>
-                        <div class="flex p-1 bg-slate-100 rounded-2xl h-[60px]">
+                        <div class="flex p-1 bg-slate-100 rounded-2xl h-[56px] sm:h-[60px]">
                             <label
-                                class="flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm">
+                                class="flex-1 flex items-center justify-center gap-1 sm:gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm px-1">
                                 <input type="radio" name="severity" value="Leve" class="hidden" required checked>
-                                <span class="text-sm font-bold text-slate-700">Leve</span>
+                                <span class="text-xs sm:text-sm font-bold text-slate-700">Leve</span>
                             </label>
                             <label
-                                class="flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm">
+                                class="flex-1 flex items-center justify-center gap-1 sm:gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm px-1">
                                 <input type="radio" name="severity" value="Moderado" class="hidden">
-                                <span class="text-sm font-bold text-amber-600">Moderado</span>
+                                <span class="text-xs sm:text-sm font-bold text-amber-600">Moderado</span>
                             </label>
                             <label
-                                class="flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm">
+                                class="flex-1 flex items-center justify-center gap-1 sm:gap-2 cursor-pointer rounded-xl transition-all peer-checked:bg-white has-[:checked]:bg-white has-[:checked]:shadow-sm px-1">
                                 <input type="radio" name="severity" value="Grave" class="hidden">
-                                <span class="text-sm font-bold text-red-600">Grave</span>
+                                <span class="text-xs sm:text-sm font-bold text-red-600">Grave</span>
                             </label>
                         </div>
                     </div>
                 </section>
 
                 <!-- Section 3 -->
-                <section class="space-y-8 pt-8 border-t border-slate-100">
+                <section class="space-y-6 sm:space-y-8 pt-6 sm:pt-8 border-t border-slate-100">
                     <div class="text-xs font-bold uppercase text-blue-500 tracking-widest">3. Descripción y Medidas
                     </div>
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">¿Qué ha ocurrido?</label>
                         <textarea name="description" rows="3"
-                            class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none resize-none"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none resize-none text-sm sm:text-base"
                             required placeholder="Describe brevemente el suceso..."></textarea>
                     </div>
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-slate-700">Actuación realizada</label>
                         <textarea name="actionTaken" rows="3"
-                            class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none resize-none"
+                            class="w-full p-3.5 sm:p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none resize-none text-sm sm:text-base"
                             required placeholder="Curas, avisos, inmovilización..."></textarea>
                     </div>
                 </section>
 
                 <!-- Section 4 -->
-                <section class="grid md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
+                <section class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 pt-6 sm:pt-8 border-t border-slate-100">
                     <div class="col-span-full text-xs font-bold uppercase text-blue-500 tracking-widest">4. Protocolo de
                         Notificación</div>
-                    <div class="p-6 bg-slate-50 rounded-3xl flex items-center justify-between">
-                        <span class="font-semibold text-slate-700">Aviso a Familia</span>
+                    <div class="p-4 sm:p-6 bg-slate-50 rounded-2xl sm:rounded-3xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                        <span class="font-semibold text-slate-700 text-sm sm:text-base">Aviso a Familia</span>
                         <div class="flex gap-4">
-                            <label class="flex items-center gap-2"><input type="radio" name="parentsCalled" value="Sí"
+                            <label class="flex items-center gap-2 cursor-pointer text-sm font-medium"><input type="radio" name="parentsCalled" value="Sí"
                                     checked> Sí</label>
-                            <label class="flex items-center gap-2"><input type="radio" name="parentsCalled" value="No">
+                            <label class="flex items-center gap-2 cursor-pointer text-sm font-medium"><input type="radio" name="parentsCalled" value="No">
                                 No</label>
                         </div>
                     </div>
-                    <div class="p-6 bg-slate-50 rounded-3xl flex items-center justify-between">
-                        <span class="font-semibold text-slate-700">Aviso 112 / Urgencias</span>
+                    <div class="p-4 sm:p-6 bg-slate-50 rounded-2xl sm:rounded-3xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                        <span class="font-semibold text-slate-700 text-sm sm:text-base">Aviso 112 / Urgencias</span>
                         <div class="flex gap-4">
-                            <label class="flex items-center gap-2"><input type="radio" name="emergencyCalled"
+                            <label class="flex items-center gap-2 cursor-pointer text-sm font-medium"><input type="radio" name="emergencyCalled"
                                     value="Sí"> Sí</label>
-                            <label class="flex items-center gap-2"><input type="radio" name="emergencyCalled" value="No"
+                            <label class="flex items-center gap-2 cursor-pointer text-sm font-medium"><input type="radio" name="emergencyCalled" value="No"
                                     checked> No</label>
                         </div>
                     </div>
                 </section>
 
                 <!-- Section 5: Signatures -->
-                <section class="space-y-8 pt-8 border-t border-slate-100">
-                    <div class="flex justify-between items-center">
+                <section class="space-y-6 sm:space-y-8 pt-6 sm:pt-8 border-t border-slate-100">
+                    <div class="flex flex-wrap justify-between items-center gap-2">
                         <div class="text-xs font-bold uppercase text-blue-500 tracking-widest">5. Firmas y Ratificación
                         </div>
                         <button type="button" onclick="App.addIntervener()"
-                            class="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
+                            class="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-blue-50">
                             <svg class="w-4 h-4">
                                 <use xlink:href="#icon-plus"></use>
                             </svg>Añadir Interviniente
                         </button>
                     </div>
 
-                    <div id="interveners-container" class="grid md:grid-cols-2 gap-6">
+                    <div id="interveners-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <!-- Intervinientes dinámicos -->
                     </div>
 
-                    <div class="p-8 bg-blue-600 rounded-[2rem] text-white space-y-4 shadow-xl shadow-blue-200">
-                        <div class="flex justify-between items-center bg-white/10 p-4 rounded-2xl">
+                    <div class="p-4 sm:p-6 md:p-8 bg-blue-600 rounded-2xl sm:rounded-[2rem] text-white space-y-4 shadow-xl shadow-blue-200">
+                        <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 bg-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl">
                             <div>
                                 <p class="text-[10px] uppercase font-bold tracking-widest opacity-70">Coordinador de
                                     Salud</p>
-                                <p class="font-bold coordinator-name-text">Orestes González Villanueva</p>
+                                <p class="font-bold text-sm sm:text-base coordinator-name-text">Orestes González Villanueva</p>
                             </div>
                             <button type="button" onclick="App.clearSignature(this)"
-                                class="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition-colors">Limpiar
+                                class="text-xs bg-white/20 px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors cursor-pointer whitespace-nowrap">Limpiar
                                 Firma</button>
                         </div>
                         <div class="bg-white rounded-2xl overflow-hidden">
@@ -496,39 +500,41 @@
                     </div>
                 </section>
 
-                <div class="flex justify-center gap-4 pt-4">
+                <div class="flex flex-col-reverse sm:flex-row justify-center items-stretch sm:items-center gap-3 sm:gap-4 pt-4">
                     <button type="reset"
-                        class="px-8 py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors">Limpiar</button>
+                        class="w-full sm:w-auto px-6 py-3.5 text-slate-400 font-bold hover:text-slate-600 transition-colors text-sm sm:text-base text-center cursor-pointer">Limpiar Formulario</button>
                     <button type="submit" id="submit-btn"
-                        class="px-12 py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-600 shadow-lg shadow-emerald-100 transition-all active:scale-95">Guardar
+                        class="w-full sm:w-auto px-8 sm:px-12 py-3.5 sm:py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-600 shadow-lg shadow-emerald-100 transition-all active:scale-95 text-sm sm:text-base text-center cursor-pointer">Guardar
                         Parte Pendiente</button>
                 </div>
             </form>
         </div>
 
         <!-- View: Pending Reports -->
-        <div id="pending-container" class="app-view hidden space-y-6">
-            <div class="flex justify-between items-end">
-                <h2 class="text-3xl font-black text-slate-800">Pendientes</h2>
-                <p class="text-slate-400 text-sm font-medium">Requieren firma final del coordinador</p>
+        <div id="pending-container" class="app-view hidden space-y-4 sm:space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-1 sm:gap-4">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-800">Pendientes</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm font-medium">Requieren firma final del coordinador</p>
+                </div>
             </div>
-            <div id="pending-list" class="grid gap-4">
+            <div id="pending-list" class="grid gap-3 sm:gap-4">
                 <!-- Listado dinámico -->
             </div>
         </div>
 
         <!-- View: Finished Reports -->
-        <div id="finished-container" class="app-view hidden space-y-6">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div id="finished-container" class="app-view hidden space-y-4 sm:space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 class="text-3xl font-black text-slate-800">Archivo Histórico</h2>
-                    <p class="text-slate-400 text-sm font-medium" id="finished-count-summary">Partes finalizados y archivados</p>
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-800">Archivo Histórico</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm font-medium" id="finished-count-summary">Partes finalizados y archivados</p>
                 </div>
-                <div class="flex flex-wrap gap-2.5 items-center">
+                <div class="flex flex-wrap sm:flex-nowrap gap-2.5 items-center w-full md:w-auto">
                     <button id="download-csv-btn"
-                        class="group flex items-center gap-2.5 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-800 hover:text-white rounded-xl font-bold text-sm shadow-sm transition-all duration-200 active:scale-95 cursor-pointer"
+                        class="flex-1 sm:flex-initial group flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-800 hover:text-white rounded-xl font-bold text-xs sm:text-sm shadow-sm transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap"
                         title="Exportar archivo estructurado Microsoft Excel (.xlsx) con hoja de datos y resumen estadístico">
-                        <svg class="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                             <path d="M8 13l3 4M11 13l-3 4"></path>
@@ -537,9 +543,9 @@
                         <span>Exportar Excel (.xlsx)</span>
                     </button>
                     <button id="bulk-pdf-btn"
-                        class="group flex items-center gap-2.5 px-4 py-2.5 bg-slate-900 hover:bg-blue-600 text-white rounded-xl font-bold text-sm shadow-sm hover:shadow-md transition-all duration-200 active:scale-95 cursor-pointer"
+                        class="flex-1 sm:flex-initial group flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2.5 bg-slate-900 hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200 active:scale-95 cursor-pointer whitespace-nowrap"
                         title="Generar dossier institucional encuadernado en PDF con portada, índice de expedientes y partes firmados">
-                        <svg class="w-4 h-4 text-slate-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-white transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                             <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -552,22 +558,22 @@
             </div>
 
             <!-- Barra de Filtro por Curso Escolar y Búsqueda -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center justify-between">
                 <div class="flex items-center gap-3 w-full md:w-auto">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Curso Escolar:</span>
                     <select id="filter-finished-year" onchange="App.onFinishedYearChange(this.value)"
-                        class="w-full md:w-auto p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
+                        class="w-full md:w-auto p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-xs sm:text-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
                         <option value="all">Todos los cursos</option>
                     </select>
                 </div>
                 <div class="w-full md:w-72">
                     <input type="text" id="search-finished-input" oninput="App.onFinishedSearch(this.value)"
                         placeholder="Buscar por alumno o curso..."
-                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
+                        class="w-full px-3.5 sm:px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
                 </div>
             </div>
 
-            <div id="finished-list" class="grid gap-4">
+            <div id="finished-list" class="grid gap-3 sm:gap-4">
                 <!-- Listado dinámico -->
             </div>
         </div>
@@ -681,11 +687,11 @@
                 </div>
             </div>
 
-            <div class="flex justify-center gap-4 mt-8 no-print">
+            <div class="flex flex-col sm:flex-row justify-center items-stretch sm:items-center gap-3 sm:gap-4 mt-6 sm:mt-8 no-print max-w-xl mx-auto w-full">
                 <button onclick="App.switchView('finished-container')"
-                    class="px-6 py-3 text-slate-400 font-bold hover:text-slate-600 transition-all">Regresar</button>
+                    class="w-full sm:w-auto px-6 py-3 text-slate-400 font-bold hover:text-slate-600 transition-all text-sm sm:text-base text-center cursor-pointer">Regresar</button>
                 <button onclick="App.exportToExcel(App.currentReportData)"
-                    class="group flex items-center gap-2 px-6 py-3 bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-800 hover:text-white rounded-xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer">
+                    class="w-full sm:w-auto group flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-800 hover:text-white rounded-xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer text-sm sm:text-base">
                     <svg class="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -694,7 +700,7 @@
                     <span>Ficha Excel (.xlsx)</span>
                 </button>
                 <button onclick="App.exportPdf(App.currentReportId)"
-                    class="group flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 cursor-pointer">
+                    class="w-full sm:w-auto group flex items-center justify-center gap-2 px-6 sm:px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 cursor-pointer text-sm sm:text-base">
                     <svg class="w-4 h-4 text-blue-200 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -708,67 +714,66 @@
 
         <!-- View: Memory -->
         <div id="memory-container"
-            class="app-view hidden bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+            class="app-view hidden bg-white p-4 sm:p-8 md:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-100">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Memoria Anual de Accidentes</h2>
-                    <p class="text-slate-400 text-sm">Resumen cuantitativo y cualitativo para la memoria de salud del centro</p>
+                    <h2 class="text-xl sm:text-2xl font-bold text-slate-800">Memoria Anual de Accidentes</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm">Resumen cuantitativo y cualitativo para la memoria de salud del centro</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <label for="filter-memory-year" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Curso:</label>
+                <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <label for="filter-memory-year" class="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Curso:</label>
                     <select id="filter-memory-year" onchange="App.onMemoryYearChange(this.value)"
-                        class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
+                        class="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-xs sm:text-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer flex-1 sm:flex-initial">
                     </select>
                     <button onclick="App.generateAnnualMemory()"
-                        class="px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors">Actualizar</button>
+                        class="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-100 transition-colors cursor-pointer whitespace-nowrap">Actualizar</button>
                 </div>
             </div>
-            <textarea id="mem-full-report" rows="16"
-                class="w-full p-6 bg-slate-50 border border-slate-200 rounded-2xl font-mono text-sm resize-none focus:ring-4 focus:ring-blue-50 outline-none leading-relaxed"></textarea>
-            <div class="flex justify-end gap-3 mt-6">
+            <textarea id="mem-full-report" rows="14"
+                class="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl font-mono text-xs sm:text-sm resize-none focus:ring-4 focus:ring-blue-50 outline-none leading-relaxed"></textarea>
+            <div class="flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-3 mt-6">
                 <button onclick="App.copyMemoryToClipboard()"
-                    class="px-6 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors">Copiar al portapapeles</button>
+                    class="w-full sm:w-auto px-5 sm:px-6 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors text-xs sm:text-sm cursor-pointer text-center">Copiar al portapapeles</button>
                 <button onclick="window.print()"
-                    class="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-100">Imprimir
-                    Memoria</button>
+                    class="w-full sm:w-auto px-6 sm:px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-100 text-xs sm:text-sm cursor-pointer text-center">Imprimir Memoria</button>
             </div>
         </div>
 
         <!-- View: Settings -->
         <div id="settings-container"
-            class="app-view hidden bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
-            <h2 class="text-2xl font-bold text-slate-800 mb-10">Configuración del Centro</h2>
-            <div class="grid md:grid-cols-2 gap-8 max-w-2xl">
-                <div class="space-y-2">
-                    <label class="block text-sm font-semibold text-slate-700">Nombre del Colegio</label>
+            class="app-view hidden bg-white p-4 sm:p-8 md:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-100">
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-6 sm:mb-10">Configuración del Centro</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 max-w-2xl">
+                <div class="space-y-1.5 sm:space-y-2">
+                    <label class="block text-xs sm:text-sm font-semibold text-slate-700">Nombre del Colegio</label>
                     <input type="text" id="setting-school-name"
-                        class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none"
+                        class="w-full p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none text-sm sm:text-base"
                         placeholder="Ej: Colegio Madre Matilde">
                 </div>
-                <div class="space-y-2">
-                    <label class="block text-sm font-semibold text-slate-700">Curso Escolar</label>
+                <div class="space-y-1.5 sm:space-y-2">
+                    <label class="block text-xs sm:text-sm font-semibold text-slate-700">Curso Escolar</label>
                     <input type="text" id="setting-school-year"
-                        class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none"
+                        class="w-full p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none text-sm sm:text-base"
                         placeholder="Ej: 2025-2026">
                 </div>
-                <div class="space-y-2 col-span-full">
-                    <label class="block text-sm font-semibold text-slate-700">Coordinador/a de Salud Escolar</label>
+                <div class="space-y-1.5 sm:space-y-2 col-span-full">
+                    <label class="block text-xs sm:text-sm font-semibold text-slate-700">Coordinador/a de Salud Escolar</label>
                     <input type="text" id="setting-coordinator-name"
-                        class="w-full p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none"
+                        class="w-full p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none text-sm sm:text-base"
                         placeholder="Ej: Orestes González Villanueva">
                 </div>
-                <div class="col-span-full pt-4">
+                <div class="col-span-full pt-2 sm:pt-4">
                     <button onclick="App.saveSettings()"
-                        class="w-full py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-600 shadow-lg shadow-emerald-50 transition-all active:scale-95 cursor-pointer">Guardar
+                        class="w-full py-3.5 sm:py-4 bg-emerald-500 text-white font-black rounded-xl sm:rounded-2xl hover:bg-emerald-600 shadow-lg shadow-emerald-50 transition-all active:scale-95 cursor-pointer text-sm sm:text-base">Guardar
                         Ajustes</button>
                 </div>
 
                 <!-- Sección: Directorio de Alumnado y Ficha de Salud -->
-                <div class="col-span-full pt-8 border-t border-slate-100">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div class="col-span-full pt-6 sm:pt-8 border-t border-slate-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4">
                         <div>
-                            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                                     <circle cx="9" cy="7" r="4"></circle>
                                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -780,16 +785,16 @@
                                 Importa el listado de alumnos para habilitar el autocompletado y mostrar alertas médicas instantáneas (alergias, patologías y teléfonos) al redactar un parte.
                             </p>
                         </div>
-                        <div class="px-3.5 py-1.5 bg-blue-50 text-blue-700 font-bold text-xs rounded-xl flex-shrink-0 border border-blue-100">
+                        <div class="px-3 py-1.5 bg-blue-50 text-blue-700 font-bold text-xs rounded-xl shrink-0 border border-blue-100">
                             <span id="census-count">0</span> alumnos en base local
                         </div>
                     </div>
 
-                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200/80 space-y-4">
-                        <div class="flex flex-wrap gap-3 items-center">
+                    <div class="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200/80 space-y-4">
+                        <div class="flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3 items-stretch sm:items-center">
                             <input type="file" id="census-file-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="App.handleCensusFileUpload(event)">
                             <button type="button" onclick="document.getElementById('census-file-input').click()"
-                                class="group flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer">
+                                class="group flex items-center justify-center gap-2 px-4 sm:px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer">
                                 <svg class="w-4 h-4 text-blue-200 group-hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                     <polyline points="17 8 12 3 7 8"></polyline>
@@ -798,7 +803,7 @@
                                 <span>Importar Alumnos (Excel / CSV)</span>
                             </button>
                             <button type="button" onclick="App.clearStudentsDirectory()"
-                                class="px-4 py-3 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer">
+                                class="px-4 py-3 bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 font-bold text-xs rounded-xl transition-all active:scale-95 cursor-pointer text-center">
                                 Vaciar Censo
                             </button>
                         </div>
@@ -815,50 +820,50 @@
     <!-- Modals -->
 
     <!-- Admin Pin Modal -->
-    <div id="admin-pin-modal-overlay" class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[110]">
-        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center border border-slate-100">
-            <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <svg class="w-8 h-8">
+    <div id="admin-pin-modal-overlay" class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[110] p-4">
+        <div class="bg-white p-6 sm:p-10 rounded-3xl sm:rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="w-14 sm:w-16 h-14 sm:h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <svg class="w-7 sm:w-8 h-7 sm:h-8">
                     <use xlink:href="#icon-settings"></use>
                 </svg>
             </div>
-            <h2 class="text-2xl font-bold text-slate-800 mb-2">Acceso Admin</h2>
-            <p class="text-slate-500 mb-8 text-sm">Clave para ajustes y memoria anual</p>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-1.5 sm:mb-2">Acceso Admin</h2>
+            <p class="text-slate-500 mb-6 sm:mb-8 text-xs sm:text-sm">Clave para ajustes y memoria anual</p>
             <div class="space-y-4">
                 <input type="password" id="admin-pin-input"
-                    class="w-full p-4 text-center text-2xl tracking-[12px] border-2 border-slate-100 rounded-2xl focus:border-amber-500 focus:ring-4 focus:ring-amber-50/50 outline-none transition-all"
+                    class="w-full p-3 sm:p-4 text-center text-xl sm:text-2xl tracking-[10px] sm:tracking-[12px] border-2 border-slate-100 rounded-2xl focus:border-amber-500 focus:ring-4 focus:ring-amber-50/50 outline-none transition-all"
                     placeholder="····" maxlength="4">
                 <div class="flex gap-3">
                     <button onclick="document.getElementById('admin-pin-modal-overlay').classList.add('hidden')"
-                        class="flex-1 py-4 text-slate-400 font-bold">Cerrar</button>
+                        class="flex-1 py-3 sm:py-4 text-slate-400 font-bold text-sm sm:text-base cursor-pointer">Cerrar</button>
                     <button id="admin-pin-submit-btn"
-                        class="flex-1 py-4 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-200 transition-all active:scale-95">Validar</button>
+                        class="flex-1 py-3 sm:py-4 bg-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-amber-200 transition-all active:scale-95 text-sm sm:text-base cursor-pointer">Validar</button>
                 </div>
             </div>
         </div>
     </div>
     <div id="confirm-delete-modal-overlay"
-        class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[110]">
-        <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-xs text-center border border-red-50">
+        class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[110] p-4">
+        <div class="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] shadow-2xl w-full max-w-xs text-center border border-red-50 max-h-[90vh] overflow-y-auto">
             <div class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg class="w-6 h-6">
                     <use xlink:href="#icon-trash"></use>
                 </svg>
             </div>
-            <h3 class="text-lg font-bold text-slate-800 mb-2">¿Eliminar Registro?</h3>
-            <p class="text-slate-500 text-sm mb-6">Esta acción es permanente y no se puede deshacer.</p>
+            <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-2">¿Eliminar Registro?</h3>
+            <p class="text-slate-500 text-xs sm:text-sm mb-6">Esta acción es permanente y no se puede deshacer.</p>
             <div class="flex gap-3">
                 <button onclick="document.getElementById('confirm-delete-modal-overlay').classList.add('hidden')"
-                    class="flex-1 py-3 text-slate-400 font-bold">Cancelar</button>
+                    class="flex-1 py-3 text-slate-400 font-bold text-sm cursor-pointer">Cancelar</button>
                 <button id="confirm-delete-confirm-btn"
-                    class="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl active:scale-95 transition-all">Eliminar</button>
+                    class="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer">Eliminar</button>
             </div>
         </div>
     </div>
 
     <!-- PWA Install Modal -->
-    <div id="pwa-install-modal-overlay" class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[120]">
-        <div class="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-100 relative animate-fadeIn mx-4">
+    <div id="pwa-install-modal-overlay" class="fixed inset-0 glass-panel hidden flex items-center justify-center z-[120] p-4">
+        <div class="bg-white p-6 sm:p-8 md:p-10 rounded-3xl sm:rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-100 relative animate-fadeIn max-h-[90vh] overflow-y-auto">
             <button onclick="document.getElementById('pwa-install-modal-overlay').classList.add('hidden')"
                 class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-all cursor-pointer"
                 title="Cerrar">
@@ -869,20 +874,20 @@
             </button>
 
             <div class="flex items-center gap-4 mb-6">
-                <img src="icon-192.png" alt="Icono de la App" class="w-16 h-16 rounded-2xl shadow-md border border-slate-100 object-contain p-1 bg-white flex-shrink-0">
+                <img src="icon-192.png" alt="Icono de la App" class="w-14 sm:w-16 h-14 sm:h-16 rounded-2xl shadow-md border border-slate-100 object-contain p-1 bg-white flex-shrink-0">
                 <div>
-                    <h3 class="text-xl font-black text-slate-900">Descargar Aplicación</h3>
+                    <h3 class="text-lg sm:text-xl font-black text-slate-900">Descargar Aplicación</h3>
                     <p class="text-xs text-slate-500 font-medium school-name-text">Partes de Accidentes</p>
                 </div>
             </div>
 
             <!-- Instalación Nativa Directa (Chrome, Edge, Android cuando está disponible) -->
             <div id="pwa-install-native-box" class="hidden mb-6">
-                <p class="text-sm text-slate-600 mb-5 leading-relaxed">
+                <p class="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">
                     Instala la aplicación en tu ordenador o móvil para acceder directamente con un solo clic, sin barras del navegador y con funcionamiento óptimo.
                 </p>
                 <button id="pwa-native-install-action-btn"
-                    class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                    class="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-sm sm:text-base">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
@@ -893,10 +898,10 @@
             </div>
 
             <!-- Instrucciones Manuales por Plataforma -->
-            <div id="pwa-install-manual-box" class="space-y-4 text-sm text-slate-600">
-                <div id="pwa-ios-instructions" class="hidden space-y-3 bg-blue-50/70 p-4 rounded-2xl border border-blue-100">
+            <div id="pwa-install-manual-box" class="space-y-4 text-xs sm:text-sm text-slate-600">
+                <div id="pwa-ios-instructions" class="hidden space-y-3 bg-blue-50/70 p-3.5 sm:p-4 rounded-2xl border border-blue-100">
                     <div class="font-bold text-blue-900 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg class="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
                             <line x1="12" y1="18" x2="12.01" y2="18"></line>
                         </svg>
@@ -909,9 +914,9 @@
                     </ol>
                 </div>
 
-                <div id="pwa-desktop-instructions" class="hidden space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div id="pwa-desktop-instructions" class="hidden space-y-3 bg-slate-50 p-3.5 sm:p-4 rounded-2xl border border-slate-200">
                     <div class="font-bold text-slate-800 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg class="w-4 h-4 text-slate-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                             <line x1="8" y1="21" x2="16" y2="21"></line>
                             <line x1="12" y1="17" x2="12" y2="21"></line>
@@ -925,9 +930,9 @@
                     </ol>
                 </div>
 
-                <div id="pwa-android-instructions" class="hidden space-y-3 bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100">
+                <div id="pwa-android-instructions" class="hidden space-y-3 bg-emerald-50/70 p-3.5 sm:p-4 rounded-2xl border border-emerald-100">
                     <div class="font-bold text-emerald-900 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg class="w-4 h-4 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
                             <line x1="12" y1="18" x2="12.01" y2="18"></line>
                         </svg>
@@ -941,7 +946,7 @@
 
                 <div class="pt-2">
                     <button onclick="document.getElementById('pwa-install-modal-overlay').classList.add('hidden')"
-                        class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl transition-all active:scale-95 cursor-pointer">
+                        class="w-full py-3 sm:py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl transition-all active:scale-95 cursor-pointer">
                         Entendido
                     </button>
                 </div>
@@ -951,8 +956,8 @@
 
     <!-- Toast Notification -->
     <div id="toast-notification"
-        class="fixed top-5 right-5 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-500 opacity-0 translate-x-5 z-[200] flex items-center gap-3">
-        <p id="toast-message" class="font-bold text-sm"></p>
+        class="fixed top-4 sm:top-5 right-4 sm:right-5 left-4 sm:left-auto text-white px-5 sm:px-6 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl transition-all duration-500 opacity-0 translate-y-2 sm:translate-x-5 z-[200] flex items-center gap-3">
+        <p id="toast-message" class="font-bold text-xs sm:text-sm"></p>
     </div>
 
     <footer class="text-center py-10 text-slate-400 text-[10px] font-bold tracking-widest uppercase no-print">

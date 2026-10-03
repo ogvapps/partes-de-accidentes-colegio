@@ -391,3 +391,73 @@ body {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
     animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* Scrollbar utilities for mobile nav */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* 100% Mobile & Tablet Responsiveness */
+@media (max-width: 640px) {
+    body {
+        font-size: 14px;
+        overflow-x: hidden;
+    }
+
+    .report-page {
+        padding: 20px 14px;
+        border-radius: 1rem;
+    }
+
+    .report-header {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+    }
+
+    .report-header-title h1 {
+        font-size: 18px;
+    }
+
+    .report-label {
+        font-size: 8.5px;
+    }
+
+    .report-value {
+        font-size: 12.5px;
+        padding: 6px 10px;
+        min-height: 36px;
+    }
+
+    .report-value.long-text {
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    .report-footer {
+        flex-direction: column;
+        gap: 6px;
+        text-align: center;
+        margin-top: 28px;
+    }
+
+    .nav-button {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.75rem !important;
+        gap: 0.35rem !important;
+        white-space: nowrap;
+        border-radius: 0.75rem !important;
+    }
+
+    .typeahead-dropdown {
+        max-height: 180px;
+    }
+
+    .typeahead-item {
+        padding: 0.6rem 0.85rem;
+        font-size: 0.85rem;
+    }
+}

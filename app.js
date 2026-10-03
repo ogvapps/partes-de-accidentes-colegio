@@ -412,6 +412,11 @@ const switchView = (targetId) => {
         btn.setAttribute('data-active', btn.dataset.target === targetId);
     });
     window.scrollTo(0, 0);
+
+    // Si navegamos al formulario, asegurar que los lienzos de firma se recalculen correctamente
+    if (targetId === 'form-container') {
+        setTimeout(handleAllCanvasResize, 50);
+    }
 };
 
 // --- Lógica de Negocio ---
@@ -614,21 +619,21 @@ const renderLists = () => {
             : (report.severity === 'Moderado' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-600');
         const sevBadge = report.severity ? `<span class="px-2 py-0.5 text-[10px] font-bold ${sevPendingClass} rounded-md">${escapeHtml(report.severity)}</span>` : '';
         const card = document.createElement('div');
-        card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
+        card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4';
         card.innerHTML = `
-            <div class="flex-grow">
+            <div class="flex-grow w-full sm:w-auto">
                 <div class="flex items-center gap-2 flex-wrap">
-                    <h3 class="font-bold text-slate-800">${escapeHtml(report.fullName)}</h3>
+                    <h3 class="font-bold text-slate-800 text-sm sm:text-base">${escapeHtml(report.fullName)}</h3>
                     <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-md">Pendiente</span>
                     ${sevBadge}
                     ${offlineBadge}
                 </div>
-                <p class="text-sm text-slate-500">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date}</p>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date}</p>
             </div>
-            <div class="flex gap-2 shrink-0">
-                <button onclick="App.reviewReport('${report.id}')" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors">Firmar</button>
-                <button onclick="App.editReport('${report.id}', 'pending')" class="p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100"><svg class="w-5 h-5"><use xlink:href="#icon-pencil"></use></svg></button>
-                <button onclick="App.confirmDelete('${report.id}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><svg class="w-5 h-5"><use xlink:href="#icon-trash"></use></svg></button>
+            <div class="flex gap-2 shrink-0 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                <button onclick="App.reviewReport('${report.id}')" class="flex-1 sm:flex-initial px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors text-center text-sm cursor-pointer">Firmar</button>
+                <button onclick="App.editReport('${report.id}', 'pending')" class="p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 cursor-pointer" title="Editar"><svg class="w-5 h-5"><use xlink:href="#icon-pencil"></use></svg></button>
+                <button onclick="App.confirmDelete('${report.id}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer" title="Eliminar"><svg class="w-5 h-5"><use xlink:href="#icon-trash"></use></svg></button>
             </div>
         `;
         pendingContainer.appendChild(card);
@@ -671,21 +676,21 @@ const renderLists = () => {
             ? 'bg-red-50 text-red-600' 
             : (report.severity === 'Moderado' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-600');
         const card = document.createElement('div');
-        card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between items-center gap-4';
+        card.className = 'p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4';
         card.innerHTML = `
-            <div class="flex-grow">
+            <div class="flex-grow w-full sm:w-auto">
                 <div class="flex items-center gap-2 flex-wrap">
-                    <h3 class="font-bold text-slate-800">${escapeHtml(report.fullName)}</h3>
+                    <h3 class="font-bold text-slate-800 text-sm sm:text-base">${escapeHtml(report.fullName)}</h3>
                     <span class="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-md">Curso ${reportYear}</span>
                     <span class="px-2 py-0.5 text-[10px] font-bold ${sevClass} rounded-md">${escapeHtml(report.severity || 'Leve')}</span>
                     ${offlineBadge}
                 </div>
-                <p class="text-sm text-slate-500 mt-1">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date} ${report.time ? `(${report.time})` : ''}</p>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">${escapeHtml(report.course)} • ${escapeHtml(report.location)} • ${date} ${report.time ? `(${report.time})` : ''}</p>
             </div>
-            <div class="flex gap-2 shrink-0">
-                <button onclick="App.viewReport('${report.id}')" class="px-4 py-2 bg-slate-50 text-slate-600 rounded-lg font-semibold hover:bg-slate-600 hover:text-white transition-colors">Ver</button>
-                <button onclick="App.editReport('${report.id}', 'finished')" class="p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100"><svg class="w-5 h-5"><use xlink:href="#icon-pencil"></use></svg></button>
-                <button onclick="App.confirmDelete('${report.id}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><svg class="w-5 h-5"><use xlink:href="#icon-trash"></use></svg></button>
+            <div class="flex gap-2 shrink-0 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                <button onclick="App.viewReport('${report.id}')" class="flex-1 sm:flex-initial px-4 py-2 bg-slate-50 text-slate-600 rounded-lg font-semibold hover:bg-slate-600 hover:text-white transition-colors text-center text-sm cursor-pointer">Ver</button>
+                <button onclick="App.editReport('${report.id}', 'finished')" class="p-2 text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 cursor-pointer" title="Editar"><svg class="w-5 h-5"><use xlink:href="#icon-pencil"></use></svg></button>
+                <button onclick="App.confirmDelete('${report.id}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 cursor-pointer" title="Eliminar"><svg class="w-5 h-5"><use xlink:href="#icon-trash"></use></svg></button>
             </div>
         `;
         finishedContainer.appendChild(card);
@@ -744,6 +749,9 @@ const initSignaturePads = () => {
 
     window.removeEventListener('resize', handleAllCanvasResize);
     window.addEventListener('resize', handleAllCanvasResize);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(handleAllCanvasResize, 150);
+    });
 
     const intervenersContainer = document.getElementById('interveners-container');
     if (intervenersContainer && intervenersContainer.children.length === 0) {
@@ -780,7 +788,7 @@ const addIntervenerBlock = (name = '', signature = null, isRemovable = false) =>
             <div>
                 <label class="block text-sm font-medium text-slate-600 mb-1">Firma</label>
                 <canvas class="signature-canvas w-full h-32 rounded-lg"></canvas>
-                <div class="flex justify-between items-center mt-1">
+                <div class="flex flex-wrap justify-between items-center gap-1 mt-1">
                     <button type="button" class="text-xs text-blue-500 hover:underline underline-offset-4 cursor-pointer" onclick="App.clearSignature(this)">Limpiar firma</button>
                     <div class="signature-hint">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z"></path></svg>
